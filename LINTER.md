@@ -91,6 +91,9 @@ Example:
 - `L025` suspicious script base (e.g., script base is only a closing fence `)`)
 - `L026` potential plain-language word encoded as a run of single-letter `<mi>` tokens
 - `L027` potential ambiguous large-operator operand (missing grouping `<mrow>` after large-op construct)
+- `L028` split `<mi>` run matching a standard LaTeX function command name
+- `L029` split `<mi>` run matching a likely `\operatorname{...}` function name
+- `L031` missing U+2061 FUNCTION APPLICATION after recognized function-name `<mi>`
 - `L030` invalid child
 - `L040` unexpected child count (exact arity)
 - `L041` too few children (minimum arity)
@@ -128,3 +131,14 @@ Example:
 - Per-rule toggles in UI
 - Precise location reporting (line/column)
 - Optional JSON schema export of rule definitions
+
+## Regression Tests
+
+Because the linter depends on browser APIs (`DOMParser`), the current regression suite is browser-runner based:
+
+- Test definitions: `/Users/brian/dev/cdx/mathml-explorer/src/lint-tests.js`
+- Runner page: `/Users/brian/dev/cdx/mathml-explorer/src/lint-tests.html`
+
+Run with local server and open:
+
+- `http://localhost:8080/src/lint-tests.html`

@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MathML Lint Tests</title>
+    <style>
+      body { font-family: "IBM Plex Sans", sans-serif; margin: 1rem; color: #1f1f1f; background: #f8f7f6; }
+      .summary { padding: 0.75rem; border: 1px solid #c6c0ba; border-radius: 8px; background: #fff; margin-bottom: 0.75rem; }
+      .pass { color: #1f6f3d; }
+      .fail { color: #a11212; }
+      .case { border: 1px solid #c6c0ba; border-radius: 8px; background: #fff; padding: 0.6rem; margin-bottom: 0.5rem; }
+      pre { white-space: pre-wrap; background: #f0efed; border-radius: 6px; padding: 0.5rem; }
+      code { font-family: "IBM Plex Mono", monospace; }
+      .xml-source { background: #151b23; color: #f4f8ff; }
+      .token-tag { color: #7bd4ff; }
+      .token-attr-name { color: #ffd782; }
+      .token-attr-value { color: #7cf7af; }
+      .token-comment { color: #c7d1dd; }
+    </style>
+  </head>
+  <body>
+    <h1>MathML Lint Test Runner</h1>
+    <div id="summary" class="summary">Running...</div>
+    <div id="cases"></div>
+    <script type="module">
+      import { runLintTestSuite } from './lint-tests.js';
+
+      function escapeHtml(value) {
+        return String(value || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;');
+      }
+
+      function highlightXml(source) {
+        const escaped = escapeHtml(source);
+        return escaped.replace(/(&lt;!--[\s\S]*?--&gt;)|(&lt;\/?[a-zA-Z][\w:-]*)([^&]*?)(&gt;)/g, (match, comment, tagOpen, attributeChunk, tagClose) => {
+          if (comment) {
+            return `<span class="token-comment">${comment}</span>`;
+          }
+          const highlightedAttributes = attributeChunk.replace(/([a-zA-Z_:][\w:.-]*)(\s*=\s*)(["'])([\s\S]*?)\3/g, (_m, attrName, equalSign, quote, attrValue) => {
+            return `<span class="token-attr-name">${attrName}</span>${equalSign}<span class="token-attr-value">${quote}${attrValue}${quote}</span>`;
+          });
+          return `<span class="token-tag">${tagOpen}</span>${highlightedAttributes}<span class="token-tag">${tagClose}</span>`;
+        });
+      }
+
+      const summary = document.querySelector('#summary');
+      const cases = document.querySelector('#cases');
+      const report = runLintTestSuite();
+
+      summary.innerHTML = report.passed
+        ? `<strong class="pass">PASS</strong> ${report.passedCount}/${report.total} test cases passed.`
+        : `<strong class="fail">FAIL</strong> ${report.passedCount}/${report.total} test cases passed.`;
+
+      for (const item of report.results) {
+        const card = document.createElement('article');
+        card.className = 'case';
+        const statusClass = item.passed ? 'pass' : 'fail';
+        card.innerHTML = `
+          <h2><span class="${statusClass}">${item.passed ? 'PASS' : 'FAIL'}</span> Test ${item.id}: ${item.name}</h2>
+          <p>Missing codes: <code>${item.missing.join(', ') || '(none)'}</code></p>
+          <p>Unexpected codes: <code>${item.unexpected.join(', ') || '(none)'}</code></p>
+          <details>
+            <summary>MathML Source (collapsed)</summary>
+            <pre class="xml-source">${highlightXml(item.source)}</pre>
+          </details>
+          <details>
+            <summary>Findings</summary>
+            <pre>${JSON.stringify(item.findings, null, 2)}</pre>
+          </details>
+        `;
+        cases.append(card);
+      }
+    </script>
+  </body>
+  </html>

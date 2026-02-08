@@ -241,6 +241,8 @@ function runLint(mathmlSource, options = {}) {
     validateMathvariantUsage(findings, node);
     validatePotentialSplitNumberLiteral(findings, node);
     validateSuspiciousScriptBase(findings, node);
+    validateFunctionNameMiRuns(findings, node);
+    validateMissingFunctionApplication(findings, node);
     validatePotentialPlainLanguageMiRuns(findings, node);
     validateAmbiguousLargeOperatorOperand(findings, node);
     validateChildren(findings, node);
@@ -394,6 +396,77 @@ function validatePotentialPlainLanguageMiRuns(findings, node) {
         'L026',
         'Potential plain-language text in <mi> tokens',
         `Detected <mi> letter run "${word}" (${run.length} tokens). Consider using <mtext> or adding intent if this is a word rather than symbolic identifiers.`,
+        SPEC_LINKS.intent
+      )
+    );
+  }
+}
+
+function validateFunctionNameMiRuns(findings, node) {
+  const children = [...node.children];
+  if (children.length < 2) {
+    return;
+  }
+
+  const runs = collectLowercaseMiRuns(children);
+  for (const run of runs) {
+    const word = run.word;
+
+    if (LATEX_BUILTIN_FUNCTION_NAMES.has(word)) {
+      findings.push(
+        makeFinding(
+          'warn',
+          'L028',
+          'Potential missing LaTeX function command',
+          `Detected split <mi> run "${word}". This matches a standard LaTeX function name; consider using the built-in function command (for example \\${word}) to preserve function semantics.`,
+          SPEC_LINKS.intent
+        )
+      );
+      continue;
+    }
+
+    if (OPERATORNAME_FUNCTION_NAMES.has(word)) {
+      findings.push(
+        makeFinding(
+          'warn',
+          'L029',
+          'Potential missing \\operatorname',
+          `Detected split <mi> run "${word}". This appears to be a common function name that is often authored with \\operatorname{${word}} for proper semantics.`,
+          SPEC_LINKS.intent
+        )
+      );
+    }
+  }
+}
+
+function validateMissingFunctionApplication(findings, node) {
+  const children = [...node.children];
+  if (!children.length) {
+    return;
+  }
+
+  for (let i = 0; i < children.length; i += 1) {
+    const current = children[i];
+    if (normalize(current.tagName) !== 'mi') {
+      continue;
+    }
+
+    const token = String(current.textContent || '').trim().toLowerCase();
+    if (!LATEX_BUILTIN_FUNCTION_NAMES.has(token)) {
+      continue;
+    }
+
+    const next = children[i + 1] || null;
+    if (next && isApplyFunctionMo(next)) {
+      continue;
+    }
+
+    findings.push(
+      makeFinding(
+        'warn',
+        'L031',
+        'Missing function application marker',
+        `<mi>${token}</mi> appears to be a function name but is not followed by U+2061 FUNCTION APPLICATION (<mo>&#x2061;</mo>). Consider adding it for clearer parsing and speech output.`,
         SPEC_LINKS.intent
       )
     );
@@ -683,6 +756,20 @@ function normalizeProfile(profile) {
 
 const SCRIPT_BASE_TAGS = new Set(['msup', 'msub', 'msubsup', 'mover', 'munder', 'munderover', 'mmultiscripts']);
 const CLOSING_FENCE_TOKENS = new Set([')', ']', '}', '\u27e9', '\u27eb', '\u3009', '\u300b', '\u300d', '\u300f', '\u3011', '\u3015', '\u3017', '\u3019', '\u301b']);
+const LATEX_BUILTIN_FUNCTION_NAMES = new Set([
+  'cos', 'sin', 'tan', 'csc', 'sec', 'cot',
+  'cosh', 'sinh', 'tanh', 'coth',
+  'arccos', 'arcsin', 'arctan',
+  'log', 'ln', 'lg', 'exp',
+  'lim', 'liminf', 'limsup',
+  'min', 'max', 'sup', 'inf'
+]);
+const OPERATORNAME_FUNCTION_NAMES = new Set([
+  'sech', 'csch',
+  'arsinh', 'arcsinh',
+  'arcosh', 'arccosh',
+  'artanh', 'arctanh'
+]);
 const LARGE_OPERATOR_SYMBOLS = new Set(['∑', '∏', '∫', '∮', '⋃', '⋂']);
 const LARGE_OPERATOR_WORDS = new Set(['lim']);
 const LIKELY_PLAIN_TEXT_WORDS = new Set([
@@ -758,35 +845,47 @@ function isLargeOperatorTokenNode(node) {
 function collectLowercaseMiRuns(children) {
   const runs = [];
   let currentChars = [];
+  let currentStart = -1;
 
-  function flushRun() {
+  function flushRun(endIndex) {
     if (!currentChars.length) {
       return;
     }
     runs.push({
       word: currentChars.join(''),
-      length: currentChars.length
+      length: currentChars.length,
+      startIndex: currentStart,
+      endIndex
     });
     currentChars = [];
+    currentStart = -1;
   }
 
-  for (const child of children) {
+  for (let i = 0; i < children.length; i += 1) {
+    const child = children[i];
     const tag = normalize(child.tagName);
     if (tag !== 'mi') {
-      flushRun();
+      flushRun(i - 1);
       continue;
     }
 
     const token = String(child.textContent || '').trim();
     if (/^[a-z]$/.test(token)) {
+      if (!currentChars.length) {
+        currentStart = i;
+      }
       currentChars.push(token);
     } else {
-      flushRun();
+      flushRun(i - 1);
     }
   }
 
-  flushRun();
+  flushRun(children.length - 1);
   return runs;
+}
+
+function isApplyFunctionMo(node) {
+  return normalize(node.tagName) === 'mo' && String(node.textContent || '').trim() === '\u2061';
 }
 
 function looksLikeNumericLiteral(value) {

@@ -93,6 +93,10 @@ python3 -m http.server 8080
 
 Then open `http://localhost:8080/src/`.
 
+Run the linter regression suite in-browser:
+
+- `http://localhost:8080/src/lint-tests.html`
+
 ## Planned Milestones
 
 - M8: Hardening, accessibility verification, docs
