@@ -1,0 +1,658 @@
+:root {
+  --bg: #eeedeb;
+  --panel: #f8f7f6;
+  --border: #c6c0ba;
+  --text: #1f1f1f;
+  --muted: #5d5752;
+  --focus: #990000;
+  --button-bg: #990000;
+  --button-hover: #7a0000;
+  --editor-bg: #151b23;
+  --editor-border: #3a4f68;
+  --editor-text: #f4f8ff;
+  --token-tag: #7bd4ff;
+  --token-attr-name: #ffd782;
+  --token-attr-value: #7cf7af;
+  --token-comment: #c7d1dd;
+  --warn: #b44f1c;
+  --error: #a11212;
+  --ok: #1f6f3d;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+  color: var(--text);
+  background: radial-gradient(circle at top left, #f4f1ed 0%, #eeedeb 40%, #e3ded8 100%);
+}
+
+.app-shell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+  gap: 0.75rem;
+  padding: 0.75rem;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.75rem;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.topbar h1 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.persistence-status {
+  margin: 0;
+  padding: 0 0.2rem;
+  font-size: 0.88rem;
+}
+
+.topbar-controls {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+label {
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+select,
+button {
+  font: inherit;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.35rem 0.6rem;
+  background: #fff;
+}
+
+button {
+  background: var(--button-bg);
+  color: #ffffff;
+  border-color: #7a0000;
+  cursor: pointer;
+}
+
+button:hover {
+  background: var(--button-hover);
+}
+
+.secondary-button {
+  background: #f3ece6;
+  color: var(--text);
+  border-color: var(--border);
+}
+
+.secondary-button:hover {
+  background: #eadfd5;
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr 1fr;
+  gap: 0.75rem;
+  align-items: start;
+}
+
+.section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.section-head h2,
+#right-pane h2,
+#help-pane h2,
+#status-pane h2 {
+  margin: 0;
+}
+
+.button-row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.editor-grid {
+  margin-top: 0.75rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.embedded-help {
+  margin-top: 0.75rem;
+}
+
+.latex-section {
+  margin-bottom: 0.75rem;
+}
+
+.latex-section summary {
+  cursor: pointer;
+  font-weight: 600;
+  margin: -0.15rem 0 0.2rem 0;
+}
+
+.latex-section summary::-webkit-details-marker {
+  margin-right: 0.35rem;
+}
+
+.latex-content {
+  margin-top: 0.45rem;
+}
+
+.latex-grid {
+  margin-top: 0.6rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+}
+
+.latex-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.5rem;
+}
+
+.latex-card h3 {
+  margin: 0 0 0.35rem 0;
+}
+
+.small-note {
+  margin: 0 0 0.35rem 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.latex-input {
+  width: 100%;
+  min-height: 120px;
+  height: 160px;
+  resize: vertical;
+  border: 1px solid var(--editor-border);
+  border-radius: 8px;
+  background: var(--editor-bg);
+  color: var(--editor-text);
+  font-family: "IBM Plex Mono", "Cascadia Code", monospace;
+  font-size: 0.86rem;
+  line-height: 1.35;
+  padding: 0.5rem;
+}
+
+.latex-status {
+  margin: 0.45rem 0;
+  font-size: 0.86rem;
+}
+
+.latex-preview {
+  margin: 0;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  background: #fff;
+  min-height: 60px;
+  max-height: 140px;
+  overflow: auto;
+  padding: 0.5rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.editor-card {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.6rem;
+  display: grid;
+  gap: 0.5rem;
+  align-content: start;
+}
+
+.editor-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.editor-card h3,
+.warnings-block h4,
+.output-card h3 {
+  margin: 0;
+}
+
+.inplace-editor {
+  position: relative;
+  width: 100%;
+  min-height: 180px;
+  height: 260px;
+  resize: vertical;
+  overflow: hidden;
+  border: 1px solid var(--editor-border);
+  border-radius: 8px;
+  background: var(--editor-bg);
+}
+
+.code-input,
+.highlight {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  border-radius: 8px;
+  font-family: "IBM Plex Mono", "Cascadia Code", monospace;
+  font-size: 0.88rem;
+  line-height: 1.4;
+  padding: 0.55rem;
+  overflow: auto;
+}
+
+.code-input {
+  resize: none;
+  background: transparent;
+  color: transparent;
+  caret-color: var(--editor-text);
+  -webkit-text-fill-color: transparent;
+  z-index: 2;
+}
+
+.highlight {
+  margin: 0;
+  pointer-events: none;
+  z-index: 1;
+  color: var(--editor-text);
+  background: transparent;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.token-tag {
+  color: var(--token-tag);
+}
+
+.token-attr-name {
+  color: var(--token-attr-name);
+}
+
+.token-attr-value {
+  color: var(--token-attr-value);
+}
+
+.token-comment {
+  color: var(--token-comment);
+}
+
+.warning-list,
+.help-list {
+  margin: 0;
+  padding-left: 1rem;
+}
+
+.warning-error {
+  color: var(--error);
+}
+
+.warning-warn {
+  color: var(--warn);
+}
+
+.warning-ok {
+  color: var(--ok);
+}
+
+.warning-info {
+  color: var(--muted);
+}
+
+.split-output {
+  margin-top: 0.75rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.output-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.55rem;
+}
+
+.output-box {
+  margin-top: 0.45rem;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  min-height: 130px;
+  padding: 0.6rem;
+  background: #fff;
+}
+
+.render-surface {
+  min-height: 110px;
+  overflow: auto;
+}
+
+.mathjax-status {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.status-idle,
+.status-loading {
+  color: var(--muted);
+}
+
+.status-ready {
+  color: #7a0000;
+}
+
+.status-error {
+  color: var(--error);
+}
+
+.status-unavailable {
+  color: var(--warn);
+}
+
+.status-warn {
+  color: var(--warn);
+}
+
+.output-error {
+  margin: 0;
+  color: var(--error);
+}
+
+.output-info {
+  margin: 0;
+  color: var(--muted);
+}
+
+.diff-section {
+  margin-top: 0.75rem;
+  border-top: 1px solid var(--border);
+  padding-top: 0.75rem;
+}
+
+.diff-controls {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.diff-summary {
+  margin: 0.35rem 0;
+  font-size: 0.9rem;
+}
+
+.diff-side {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.diff-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.5rem;
+}
+
+.diff-card h4 {
+  margin: 0 0 0.3rem 0;
+}
+
+.diff-pane {
+  margin: 0;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  background: #fff;
+  min-height: 90px;
+  padding: 0.5rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.diff-add {
+  background: #d7fbe3;
+}
+
+.diff-remove {
+  background: #ffdcdc;
+}
+
+.diff-equal,
+.diff-empty {
+  background: transparent;
+}
+
+.hidden {
+  display: none;
+}
+
+.modal-backdrop.hidden {
+  display: none !important;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(25, 25, 25, 0.56);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.modal-panel {
+  width: min(1100px, 96vw);
+  height: min(82vh, 760px);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.75rem;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 0.5rem;
+}
+
+.modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-head h2 {
+  margin: 0;
+}
+
+.modal-input {
+  width: 100%;
+  height: 100%;
+  min-height: 220px;
+  border: 1px solid var(--editor-border);
+  border-radius: 8px;
+  background: var(--editor-bg);
+  color: var(--editor-text);
+  font-family: "IBM Plex Mono", "Cascadia Code", monospace;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  padding: 0.65rem;
+  resize: none;
+}
+
+.a11y-section {
+  margin-top: 0;
+  border-top: 0;
+  padding-top: 0;
+}
+
+.engine-status,
+.channel-status {
+  margin: 0.35rem 0;
+  font-size: 0.85rem;
+}
+
+.a11y-grid {
+  margin-top: 0.5rem;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.a11y-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.5rem;
+}
+
+.a11y-card h4,
+.a11y-card h5 {
+  margin: 0;
+}
+
+.a11y-columns {
+  margin-top: 0.4rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.output-text {
+  margin: 0.3rem 0 0 0;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  background: #fff;
+  min-height: 70px;
+  padding: 0.45rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 0.82rem;
+}
+
+.context-summary {
+  margin-top: 0.4rem;
+  margin-bottom: 0.7rem;
+}
+
+.help-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.analysis-section {
+  margin-top: 0.9rem;
+  border-top: 1px solid var(--border);
+  padding-top: 0.75rem;
+}
+
+.analysis-section h3 {
+  margin: 0.3rem 0;
+}
+
+.analysis-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin-bottom: 0.65rem;
+}
+
+.analysis-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.45rem;
+}
+
+.analysis-card h4 {
+  margin: 0 0 0.35rem 0;
+}
+
+.analysis-list {
+  margin: 0;
+  padding-left: 1rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.analysis-item p {
+  margin: 0.15rem 0;
+}
+
+.analysis-item a {
+  font-size: 0.82rem;
+}
+
+.severity-error strong {
+  color: var(--error);
+}
+
+.severity-warn strong {
+  color: var(--warn);
+}
+
+.severity-info strong,
+.severity-idle strong {
+  color: var(--muted);
+}
+
+.severity-ok strong,
+.severity-ready strong {
+  color: var(--ok);
+}
+
+.status-json {
+  margin: 0;
+  font-size: 0.8rem;
+  white-space: pre-wrap;
+}
+
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+@media (max-width: 1100px) {
+  .workspace {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  #left-pane {
+    grid-column: 1 / -1;
+  }
+
+  .editor-grid,
+  .latex-grid,
+  .help-grid,
+  .split-output,
+  .a11y-columns,
+  .analysis-grid,
+  .diff-side {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+}

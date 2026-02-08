@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MathML Learning Workbench</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div id="app" class="app-shell">
+      <header class="panel topbar" aria-label="Application Controls">
+        <h1>MathML Learning Workbench</h1>
+        <div class="topbar-controls" role="group" aria-label="Rendering controls">
+          <label>
+            MathJax Version
+            <select id="mathjax-version-select" name="mathjax-version"></select>
+          </label>
+          <label>
+            Output Mode
+            <select id="mathjax-output-mode-select" name="mathjax-output-mode">
+              <option value="chtml">CHTML</option>
+              <option value="svg">SVG</option>
+            </select>
+          </label>
+          <label>
+            Lint Profile
+            <select id="lint-profile-select" name="lint-profile-select">
+              <option value="authoring-guidance">Authoring guidance</option>
+              <option value="strict-core">Strict core</option>
+            </select>
+          </label>
+          <button id="share-url-button" type="button">Copy Share URL</button>
+          <button id="save-json-button" type="button">Save JSON</button>
+          <button id="load-json-button" type="button">Load JSON</button>
+          <input id="load-json-input" type="file" accept="application/json,.json" hidden />
+        </div>
+      </header>
+      <p id="persistence-status" class="persistence-status" aria-live="polite"></p>
+
+      <main class="workspace" aria-label="Workspace">
+        <section id="left-pane" class="panel" aria-label="Inputs">
+          <details class="latex-section panel" aria-label="LaTeX Conversion">
+            <summary>LaTeX to MathML</summary>
+            <div class="latex-content">
+              <div class="section-head">
+                <h2>LaTeX to MathML</h2>
+                <div class="button-row">
+                  <label>
+                    Target
+                    <select id="latex-target-select" name="latex-target-select">
+                      <option value="A">MathML A</option>
+                      <option value="B">MathML B</option>
+                    </select>
+                  </label>
+                  <button id="convert-latex-button" type="button">Convert LaTeX</button>
+                </div>
+              </div>
+
+              <div class="latex-grid">
+                <article class="latex-card">
+                  <h3>LaTeX Setup</h3>
+                  <p class="small-note">Use setup notes such as <code>packages: mhchem, physics, unicode</code> or <code>\\require{mhchem}</code>.</p>
+                  <textarea id="latex-setup-input" class="latex-input" spellcheck="false" aria-label="LaTeX setup"></textarea>
+                </article>
+                <article class="latex-card">
+                  <h3>LaTeX Input</h3>
+                  <textarea id="latex-input" class="latex-input" spellcheck="false" aria-label="LaTeX expression"></textarea>
+                </article>
+              </div>
+              <p id="latex-status" class="latex-status status-idle">LaTeX conversion idle.</p>
+              <pre id="latex-last-mathml" class="latex-preview"></pre>
+            </div>
+          </details>
+
+          <div class="section-head">
+            <h2>MathML Inputs</h2>
+            <div class="button-row">
+              <button id="format-a-button" type="button">Autoformat A</button>
+              <button id="format-b-button" type="button">Autoformat B</button>
+            </div>
+          </div>
+
+          <div class="editor-grid">
+            <article class="editor-card" aria-labelledby="mathml-a-title">
+              <div class="editor-card-head">
+                <h3 id="mathml-a-title">MathML A</h3>
+                <button id="expand-a-button" type="button" class="secondary-button">Expand</button>
+              </div>
+              <div class="inplace-editor">
+                <pre id="mathml-a-highlight" class="highlight" aria-label="Syntax highlighted MathML A"></pre>
+                <textarea id="mathml-a-input" class="code-input" spellcheck="false" aria-label="MathML input A"></textarea>
+              </div>
+              <div class="warnings-block">
+                <h4>Warnings</h4>
+                <ul id="mathml-a-warnings" class="warning-list"></ul>
+              </div>
+            </article>
+
+            <article class="editor-card" aria-labelledby="mathml-b-title">
+              <div class="editor-card-head">
+                <h3 id="mathml-b-title">MathML B</h3>
+                <button id="expand-b-button" type="button" class="secondary-button">Expand</button>
+              </div>
+              <div class="inplace-editor">
+                <pre id="mathml-b-highlight" class="highlight" aria-label="Syntax highlighted MathML B"></pre>
+                <textarea id="mathml-b-input" class="code-input" spellcheck="false" aria-label="MathML input B"></textarea>
+              </div>
+              <div class="warnings-block">
+                <h4>Warnings</h4>
+                <ul id="mathml-b-warnings" class="warning-list"></ul>
+              </div>
+            </article>
+          </div>
+
+          <section id="help-pane" class="panel embedded-help" aria-live="polite" aria-label="Context Help">
+            <h2>Context Help</h2>
+            <p id="context-summary" class="context-summary">Move the cursor in MathML A or B to show tag guidance.</p>
+            <div class="help-grid">
+              <section>
+                <h3>Valid Child Tags</h3>
+                <ul id="context-children-list" class="help-list"></ul>
+              </section>
+              <section>
+                <h3>Valid Attributes</h3>
+                <ul id="context-attributes-list" class="help-list"></ul>
+              </section>
+            </div>
+
+            <section class="analysis-section" aria-label="Lint and Intent Analysis">
+              <h3>Lint Findings</h3>
+              <div class="analysis-grid">
+                <article class="analysis-card">
+                  <h4>Expression A</h4>
+                  <ul id="lint-findings-a" class="analysis-list"></ul>
+                </article>
+                <article class="analysis-card">
+                  <h4>Expression B</h4>
+                  <ul id="lint-findings-b" class="analysis-list"></ul>
+                </article>
+              </div>
+
+              <h3>Intent Suggestions</h3>
+              <div class="analysis-grid">
+                <article class="analysis-card">
+                  <h4>Expression A</h4>
+                  <ul id="intent-suggestions-a" class="analysis-list"></ul>
+                </article>
+                <article class="analysis-card">
+                  <h4>Expression B</h4>
+                  <ul id="intent-suggestions-b" class="analysis-list"></ul>
+                </article>
+              </div>
+            </section>
+          </section>
+        </section>
+
+        <section id="right-pane" class="panel" aria-label="Outputs">
+          <div class="section-head">
+            <h2>Outputs</h2>
+            <p id="mathjax-load-status" class="mathjax-status status-idle">MathJax: idle</p>
+          </div>
+          <div class="split-output">
+            <article class="output-card">
+              <h3>Native Render A</h3>
+              <div id="native-render-a" class="output-box" aria-label="Native Render A"></div>
+            </article>
+            <article class="output-card">
+              <h3>Native Render B</h3>
+              <div id="native-render-b" class="output-box" aria-label="Native Render B"></div>
+            </article>
+            <article class="output-card">
+              <h3>MathJax Render A</h3>
+              <div id="mathjax-render-a" class="output-box" aria-label="MathJax Render A"></div>
+            </article>
+            <article class="output-card">
+              <h3>MathJax Render B</h3>
+              <div id="mathjax-render-b" class="output-box" aria-label="MathJax Render B"></div>
+            </article>
+          </div>
+        </section>
+
+        <section id="accessibility-pane" class="panel" aria-label="Accessibility and Diff">
+          <section class="a11y-section" aria-label="Accessibility Outputs">
+            <div class="section-head">
+              <h3>Accessibility Outputs (A/B)</h3>
+            </div>
+            <p id="mathcat-engine-status" class="engine-status status-idle">MathCAT: idle</p>
+            <p id="sre-engine-status" class="engine-status status-idle">SRE: idle</p>
+
+            <div class="a11y-grid">
+              <article class="a11y-card">
+                <h4>MathCAT ClearSpeak</h4>
+                <p id="output-status-mathcatClearspeak" class="channel-status status-idle"></p>
+                <div class="a11y-columns">
+                  <div><h5>A</h5><pre id="output-mathcatClearspeak-a" class="output-text"></pre></div>
+                  <div><h5>B</h5><pre id="output-mathcatClearspeak-b" class="output-text"></pre></div>
+                </div>
+              </article>
+
+              <article class="a11y-card">
+                <h4>MathCAT SimpleSpeak</h4>
+                <p id="output-status-mathcatSimplespeak" class="channel-status status-idle"></p>
+                <div class="a11y-columns">
+                  <div><h5>A</h5><pre id="output-mathcatSimplespeak-a" class="output-text"></pre></div>
+                  <div><h5>B</h5><pre id="output-mathcatSimplespeak-b" class="output-text"></pre></div>
+                </div>
+              </article>
+
+              <article class="a11y-card">
+                <h4>MathCAT Braille</h4>
+                <p id="output-status-mathcatBraille" class="channel-status status-idle"></p>
+                <div class="a11y-columns">
+                  <div><h5>A</h5><pre id="output-mathcatBraille-a" class="output-text"></pre></div>
+                  <div><h5>B</h5><pre id="output-mathcatBraille-b" class="output-text"></pre></div>
+                </div>
+              </article>
+
+              <article class="a11y-card">
+                <h4>SRE ClearSpeak</h4>
+                <p id="output-status-sreClearspeak" class="channel-status status-idle"></p>
+                <div class="a11y-columns">
+                  <div><h5>A</h5><pre id="output-sreClearspeak-a" class="output-text"></pre></div>
+                  <div><h5>B</h5><pre id="output-sreClearspeak-b" class="output-text"></pre></div>
+                </div>
+              </article>
+
+              <article class="a11y-card">
+                <h4>SRE MathSpeak</h4>
+                <p id="output-status-sreMathspeak" class="channel-status status-idle"></p>
+                <div class="a11y-columns">
+                  <div><h5>A</h5><pre id="output-sreMathspeak-a" class="output-text"></pre></div>
+                  <div><h5>B</h5><pre id="output-sreMathspeak-b" class="output-text"></pre></div>
+                </div>
+              </article>
+            </div>
+          </section>
+
+          <section class="diff-section" aria-label="A/B Output Diff">
+            <div class="section-head">
+              <h3>A/B Output Diff (Same Channel)</h3>
+              <div class="diff-controls">
+                <label>
+                  Channel
+                  <select id="diff-channel-select" name="diff-channel-select"></select>
+                </label>
+                <label>
+                  View
+                  <select id="diff-view-select" name="diff-view-select">
+                    <option value="unified">Unified</option>
+                    <option value="side-by-side">Side by side</option>
+                  </select>
+                </label>
+              </div>
+            </div>
+            <p id="diff-summary" class="diff-summary"></p>
+            <pre id="diff-unified" class="diff-pane"></pre>
+            <div id="diff-side-by-side" class="diff-side hidden">
+              <article class="diff-card">
+                <h4>A</h4>
+                <pre id="diff-side-a" class="diff-pane"></pre>
+              </article>
+              <article class="diff-card">
+                <h4>B</h4>
+                <pre id="diff-side-b" class="diff-pane"></pre>
+              </article>
+            </div>
+          </section>
+        </section>
+      </main>
+
+      <aside id="status-pane" class="panel" aria-label="Status">
+        <details>
+          <summary>Status</summary>
+          <pre id="status-json" class="status-json" aria-live="polite"></pre>
+        </details>
+      </aside>
+    </div>
+
+    <div id="editor-modal-backdrop" class="modal-backdrop hidden" aria-hidden="true">
+      <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="editor-modal-title">
+        <div class="modal-head">
+          <h2 id="editor-modal-title">Edit MathML</h2>
+          <div class="button-row">
+            <button id="editor-modal-format" type="button" class="secondary-button">Autoformat</button>
+            <button id="editor-modal-close" type="button">Close</button>
+          </div>
+        </div>
+        <textarea id="editor-modal-input" class="modal-input" spellcheck="false" aria-label="Large MathML editor"></textarea>
+      </section>
+    </div>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
