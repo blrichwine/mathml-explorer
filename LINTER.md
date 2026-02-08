@@ -89,6 +89,7 @@ Example:
 - `L023` uncommon (but recognized) `mathvariant` value
 - `L024` potential split numeric literal across `<mn><mo>,</mo><mn>`
 - `L025` suspicious script base (e.g., script base is only a closing fence `)`)
+- `L026` potential plain-language word encoded as a run of single-letter `<mi>` tokens
 - `L030` invalid child
 - `L040` unexpected child count (exact arity)
 - `L041` too few children (minimum arity)

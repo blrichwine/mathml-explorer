@@ -241,6 +241,7 @@ function runLint(mathmlSource, options = {}) {
     validateMathvariantUsage(findings, node);
     validatePotentialSplitNumberLiteral(findings, node);
     validateSuspiciousScriptBase(findings, node);
+    validatePotentialPlainLanguageMiRuns(findings, node);
     validateChildren(findings, node);
     validateArity(findings, node);
     validateTokenContent(findings, node);
@@ -370,6 +371,32 @@ function validateSuspiciousScriptBase(findings, node) {
       SPEC_LINKS.presentation
     )
   );
+}
+
+function validatePotentialPlainLanguageMiRuns(findings, node) {
+  const children = [...node.children];
+  if (children.length < 3) {
+    return;
+  }
+
+  const runs = collectLowercaseMiRuns(children);
+  for (const run of runs) {
+    const word = run.word;
+    const likelyPlainWord = word.length >= 4 || LIKELY_PLAIN_TEXT_WORDS.has(word);
+    if (!likelyPlainWord) {
+      continue;
+    }
+
+    findings.push(
+      makeFinding(
+        'warn',
+        'L026',
+        'Potential plain-language text in <mi> tokens',
+        `Detected <mi> letter run "${word}" (${run.length} tokens). Consider using <mtext> or adding intent if this is a word rather than symbolic identifiers.`,
+        SPEC_LINKS.intent
+      )
+    );
+  }
 }
 
 function validateMathRootNamespace(findings, root) {
@@ -621,6 +648,21 @@ function normalizeProfile(profile) {
 
 const SCRIPT_BASE_TAGS = new Set(['msup', 'msub', 'msubsup', 'mover', 'munder', 'munderover', 'mmultiscripts']);
 const CLOSING_FENCE_TOKENS = new Set([')', ']', '}', '\u27e9', '\u27eb', '\u3009', '\u300b', '\u300d', '\u300f', '\u3011', '\u3015', '\u3017', '\u3019', '\u301b']);
+const LIKELY_PLAIN_TEXT_WORDS = new Set([
+  'and',
+  'but',
+  'all',
+  'the',
+  'for',
+  'with',
+  'from',
+  'into',
+  'over',
+  'under',
+  'time',
+  'distance',
+  'velocity'
+]);
 
 function isBooleanToken(value) {
   return value === 'true' || value === 'false';
@@ -642,6 +684,40 @@ function isTokenList(value, allowedTokens) {
 function isNumericToken(value) {
   const text = String(value || '').trim();
   return /^\d+(?:\.\d+)?$/.test(text);
+}
+
+function collectLowercaseMiRuns(children) {
+  const runs = [];
+  let currentChars = [];
+
+  function flushRun() {
+    if (!currentChars.length) {
+      return;
+    }
+    runs.push({
+      word: currentChars.join(''),
+      length: currentChars.length
+    });
+    currentChars = [];
+  }
+
+  for (const child of children) {
+    const tag = normalize(child.tagName);
+    if (tag !== 'mi') {
+      flushRun();
+      continue;
+    }
+
+    const token = String(child.textContent || '').trim();
+    if (/^[a-z]$/.test(token)) {
+      currentChars.push(token);
+    } else {
+      flushRun();
+    }
+  }
+
+  flushRun();
+  return runs;
 }
 
 function looksLikeNumericLiteral(value) {
