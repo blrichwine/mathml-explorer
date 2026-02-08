@@ -240,6 +240,7 @@ function runLint(mathmlSource, options = {}) {
     validateAttributeValues(findings, node);
     validateMathvariantUsage(findings, node);
     validatePotentialSplitNumberLiteral(findings, node);
+    validateSuspiciousScriptBase(findings, node);
     validateChildren(findings, node);
     validateArity(findings, node);
     validateTokenContent(findings, node);
@@ -335,6 +336,37 @@ function validatePotentialSplitNumberLiteral(findings, node) {
       'L024',
       'Potential split number literal',
       `<${tag}> contains ${runCount} comma-separated <mn>/<mo>/<mn> run(s). If this is one formatted number (e.g., 200,300.87), consider a single <mn> token.`,
+      SPEC_LINKS.presentation
+    )
+  );
+}
+
+function validateSuspiciousScriptBase(findings, node) {
+  const tag = normalize(node.tagName);
+  if (!SCRIPT_BASE_TAGS.has(tag)) {
+    return;
+  }
+
+  const base = node.children[0];
+  if (!base) {
+    return;
+  }
+
+  if (normalize(base.tagName) !== 'mo') {
+    return;
+  }
+
+  const token = base.textContent.trim();
+  if (!CLOSING_FENCE_TOKENS.has(token)) {
+    return;
+  }
+
+  findings.push(
+    makeFinding(
+      'warn',
+      'L025',
+      'Suspicious script base',
+      `<${tag}> uses <mo>${token}</mo> as its base. This often indicates grouping loss; consider wrapping the intended base expression in <mrow>.`,
       SPEC_LINKS.presentation
     )
   );
@@ -586,6 +618,9 @@ function normalize(value) {
 function normalizeProfile(profile) {
   return profile === 'strict-core' ? 'strict-core' : 'authoring-guidance';
 }
+
+const SCRIPT_BASE_TAGS = new Set(['msup', 'msub', 'msubsup', 'mover', 'munder', 'munderover', 'mmultiscripts']);
+const CLOSING_FENCE_TOKENS = new Set([')', ']', '}', '\u27e9', '\u27eb', '\u3009', '\u300b', '\u300d', '\u300f', '\u3011', '\u3015', '\u3017', '\u3019', '\u301b']);
 
 function isBooleanToken(value) {
   return value === 'true' || value === 'false';
