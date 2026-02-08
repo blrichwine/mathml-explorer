@@ -186,6 +186,29 @@ button:hover {
   color: var(--muted);
 }
 
+.nimas-section {
+  margin-top: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.nimas-controls {
+  display: grid;
+  grid-template-columns: 1fr 170px auto;
+  gap: 0.5rem;
+  align-items: end;
+}
+
+.nimas-image {
+  display: block;
+  max-width: 100%;
+  max-height: 180px;
+  margin-top: 0.45rem;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  background: #fff;
+  cursor: zoom-in;
+}
+
 .latex-input {
   width: 100%;
   min-height: 120px;
@@ -501,6 +524,31 @@ button:hover {
   resize: none;
 }
 
+.nimas-image-modal-panel {
+  width: min(1240px, 98vw);
+  height: min(90vh, 920px);
+}
+
+.nimas-image-modal-body {
+  height: 100%;
+  min-height: 0;
+  display: block;
+  overflow: auto;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  background: #fff;
+  padding: 0.5rem;
+  text-align: center;
+}
+
+.nimas-image-modal-view {
+  max-width: none;
+  max-height: none;
+  width: auto;
+  height: auto;
+  image-rendering: auto;
+}
+
 .a11y-section {
   margin-top: 0;
   border-top: 0;
@@ -641,6 +689,7 @@ button:hover {
   }
 
   .editor-grid,
+  .nimas-controls,
   .latex-grid,
   .help-grid,
   .split-output,

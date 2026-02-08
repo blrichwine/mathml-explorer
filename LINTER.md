@@ -47,6 +47,7 @@ Rules are curated from MathML Core and MathML specification guidance, with direc
 - `validateChildren`
 - `validateArity`
 - `validateTokenContent`
+- `validateCoreCompatibility`
 - `validateSemanticsHints`
 5. Deduplicate findings
 6. Return results
@@ -78,13 +79,20 @@ Example:
 - `L001` empty expression
 - `L002` invalid XML
 - `L003` unexpected root
+- `L004` missing `<math>` namespace declaration
+- `L005` unexpected `<math>` namespace value
 - `L010` unknown tag
 - `L011` deprecated pattern
 - `L020` unknown attribute
+- `L021` invalid attribute value for constrained attributes
 - `L030` invalid child
 - `L040` unexpected child count (exact arity)
 - `L041` too few children (minimum arity)
 - `L050` token structure warning
+- `L070` element outside MathML Core compatibility subset
+- `L071` potential non-core attribute compatibility warning
+- `L072` at-risk element compatibility warning
+- `L073` at-risk attribute compatibility warning
 - `L060-L062` semantic/intent hints
 - `L000` no findings
 
@@ -93,6 +101,12 @@ Example:
 - The linter intentionally trades completeness for clarity and authoring feedback speed.
 - Some MathML constructs may still require rule expansion.
 - This is not a formal conformance checker.
+- Top-level `<math>` accessibility attributes used in NIMAS/MathML workflows are treated as valid and will not trigger `L020` unknown-attribute warnings:
+  - `altimg`
+  - `alttext`
+  - `altimg-width`
+  - `altimg-height`
+  - `altimg-valign`
 
 ## How to Extend
 

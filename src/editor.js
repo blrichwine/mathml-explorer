@@ -26,7 +26,7 @@ const GLOBAL_ATTRIBUTES = [
 const MATHML_REFERENCE = {
   math: {
     children: ['mrow', 'mi', 'mn', 'mo', 'mfrac', 'msup', 'msub', 'msubsup', 'msqrt', 'mroot', 'mfenced', 'mtable', 'semantics'],
-    attributes: ['xmlns', 'display', 'intent']
+    attributes: ['xmlns', 'display', 'intent', 'altimg', 'alttext', 'altimg-width', 'altimg-height', 'altimg-valign']
   },
   mrow: {
     children: ['mi', 'mn', 'mo', 'mtext', 'mspace', 'mfrac', 'msup', 'msub', 'msubsup', 'msqrt', 'mroot', 'mfenced', 'mtable'],

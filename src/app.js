@@ -3,6 +3,7 @@ import { runLint } from './lint.js';
 import { getIntentSuggestions } from './intent.js';
 import { diffOutputs } from './diff.js';
 import { convertLatexToMathML } from './latex.js';
+import { loadNimasFromDirectory, loadNimasFromFile } from './nimas.js';
 import {
   exportStateToJson,
   hydrateState,
@@ -89,6 +90,14 @@ function createInitialState() {
       viewMode: 'unified'
     },
     latexTarget: 'A',
+    nimas: {
+      sourceLabel: '',
+      status: 'No NIMAS source loaded yet.',
+      statusLevel: 'idle',
+      instances: [],
+      selectedIndex: -1,
+      target: 'A'
+    },
     meta: {
       lastUpdated: new Date().toISOString()
     }
@@ -156,6 +165,18 @@ function wireControls(store) {
   const latexInput = document.querySelector('#latex-input');
   const latexTargetSelect = document.querySelector('#latex-target-select');
   const convertLatexButton = document.querySelector('#convert-latex-button');
+  const nimasLoadFolderButton = document.querySelector('#nimas-load-folder-button');
+  const nimasLoadFileButton = document.querySelector('#nimas-load-file-button');
+  const nimasFileInput = document.querySelector('#nimas-file-input');
+  const nimasInstanceSelect = document.querySelector('#nimas-instance-select');
+  const nimasTargetSelect = document.querySelector('#nimas-target-select');
+  const nimasImportButton = document.querySelector('#nimas-import-button');
+  const nimasImagePreview = document.querySelector('#nimas-image-preview');
+  const nimasImageModalBackdrop = document.querySelector('#nimas-image-modal-backdrop');
+  const nimasImageModalClose = document.querySelector('#nimas-image-modal-close');
+  const nimasImageModalView = document.querySelector('#nimas-image-modal-view');
+  const nimasImageZoomRange = document.querySelector('#nimas-image-zoom-range');
+  const nimasImageZoomValue = document.querySelector('#nimas-image-zoom-value');
 
   populateMathJaxVersions(versionSelect);
   populateDiffChannels(diffChannelSelect);
@@ -294,6 +315,149 @@ function wireControls(store) {
     }
   });
 
+  nimasLoadFolderButton.addEventListener('click', async () => {
+    store.setState((draft) => {
+      draft.nimas.status = 'Loading NIMAS folder...';
+      draft.nimas.statusLevel = 'loading';
+    });
+    try {
+      const loaded = await loadNimasFromDirectory();
+      store.setState((draft) => {
+        draft.nimas.sourceLabel = loaded.sourceLabel;
+        draft.nimas.status = `Loaded ${loaded.instances.length} MathML instance(s) from ${loaded.sourceLabel}.`;
+        draft.nimas.statusLevel = loaded.instances.length ? 'ready' : 'warn';
+        draft.nimas.instances = loaded.instances;
+        draft.nimas.selectedIndex = loaded.instances.length ? 0 : -1;
+      });
+    } catch (error) {
+      store.setState((draft) => {
+        draft.nimas.status = `NIMAS folder load failed: ${error.message}`;
+        draft.nimas.statusLevel = 'error';
+        draft.nimas.instances = [];
+        draft.nimas.selectedIndex = -1;
+      });
+    }
+  });
+
+  nimasLoadFileButton.addEventListener('click', () => {
+    nimasFileInput.click();
+  });
+
+  nimasFileInput.addEventListener('change', async () => {
+    const file = nimasFileInput.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    store.setState((draft) => {
+      draft.nimas.status = `Loading ${file.name}...`;
+      draft.nimas.statusLevel = 'loading';
+    });
+    try {
+      const loaded = await loadNimasFromFile(file);
+      store.setState((draft) => {
+        draft.nimas.sourceLabel = loaded.sourceLabel;
+        draft.nimas.status = `Loaded ${loaded.instances.length} MathML instance(s) from ${loaded.sourceLabel}.`;
+        draft.nimas.statusLevel = loaded.instances.length ? 'ready' : 'warn';
+        draft.nimas.instances = loaded.instances;
+        draft.nimas.selectedIndex = loaded.instances.length ? 0 : -1;
+      });
+    } catch (error) {
+      store.setState((draft) => {
+        draft.nimas.status = `NIMAS XML load failed: ${error.message}`;
+        draft.nimas.statusLevel = 'error';
+        draft.nimas.instances = [];
+        draft.nimas.selectedIndex = -1;
+      });
+    } finally {
+      nimasFileInput.value = '';
+    }
+  });
+
+  nimasInstanceSelect.addEventListener('change', () => {
+    store.setState((draft) => {
+      draft.nimas.selectedIndex = Number(nimasInstanceSelect.value);
+    });
+  });
+
+  nimasTargetSelect.addEventListener('change', () => {
+    store.setState((draft) => {
+      draft.nimas.target = nimasTargetSelect.value;
+    });
+  });
+
+  nimasImportButton.addEventListener('click', () => {
+    const state = store.getState();
+    const index = state.nimas.selectedIndex;
+    let selected = null;
+    if (index >= 0) {
+      selected = state.nimas.instances.find((entry) => entry.index === index) || null;
+    }
+    if (!selected) {
+      selected = state.nimas.instances[0] || null;
+    }
+
+    if (!selected) {
+      store.setState((draft) => {
+        draft.nimas.status = 'No MathML instance selected.';
+        draft.nimas.statusLevel = 'warn';
+      });
+      return;
+    }
+
+    store.setState((draft) => {
+      if (draft.nimas.target === 'B') {
+        draft.mathmlB = selected.mathml;
+        draft.selectedExpression = 'B';
+      } else {
+        draft.mathmlA = selected.mathml;
+        draft.selectedExpression = 'A';
+      }
+      draft.nimas.status = `Imported ${selected.id} into MathML ${draft.nimas.target}.`;
+      draft.nimas.statusLevel = 'ready';
+    });
+  });
+
+  nimasImagePreview.addEventListener('click', () => {
+    if (!nimasImagePreview.src || nimasImagePreview.classList.contains('hidden')) {
+      return;
+    }
+    openNimasImageModal(
+      nimasImageModalBackdrop,
+      nimasImageModalView,
+      nimasImageZoomRange,
+      nimasImageZoomValue,
+      nimasImagePreview.src,
+      nimasImagePreview.alt
+    );
+  });
+
+  nimasImageModalClose.addEventListener('click', () => {
+    closeNimasImageModal(nimasImageModalBackdrop, nimasImageModalView, nimasImageZoomRange, nimasImageZoomValue);
+  });
+
+  nimasImageModalBackdrop.addEventListener('click', (event) => {
+    if (event.target === nimasImageModalBackdrop) {
+      closeNimasImageModal(nimasImageModalBackdrop, nimasImageModalView, nimasImageZoomRange, nimasImageZoomValue);
+    }
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && !nimasImageModalBackdrop.classList.contains('hidden')) {
+      closeNimasImageModal(nimasImageModalBackdrop, nimasImageModalView, nimasImageZoomRange, nimasImageZoomValue);
+    }
+  });
+
+  nimasImageModalView.addEventListener('load', () => {
+    const naturalWidth = nimasImageModalView.naturalWidth || 0;
+    nimasImageModalView.dataset.naturalWidth = String(naturalWidth);
+    applyNimasImageZoom(nimasImageModalView, nimasImageZoomRange, nimasImageZoomValue);
+  });
+
+  nimasImageZoomRange.addEventListener('input', () => {
+    applyNimasImageZoom(nimasImageModalView, nimasImageZoomRange, nimasImageZoomValue);
+  });
+
   const current = store.getState();
   versionSelect.value = current.mathjax.versionId;
   modeSelect.value = current.mathjax.outputMode;
@@ -309,6 +473,7 @@ function wireControls(store) {
   latexSetupInput.value = current.latexSetup;
   latexInput.value = current.latexInput;
   latexTargetSelect.value = current.latexTarget || 'A';
+  nimasTargetSelect.value = current.nimas?.target || 'A';
 }
 
 function syncControlValues(state) {
@@ -320,6 +485,7 @@ function syncControlValues(state) {
   const latexSetupInput = document.querySelector('#latex-setup-input');
   const latexInput = document.querySelector('#latex-input');
   const latexTargetSelect = document.querySelector('#latex-target-select');
+  const nimasTargetSelect = document.querySelector('#nimas-target-select');
 
   if (versionSelect.value !== state.mathjax.versionId) {
     versionSelect.value = state.mathjax.versionId;
@@ -344,6 +510,9 @@ function syncControlValues(state) {
   }
   if (latexTargetSelect.value !== (state.latexTarget || 'A')) {
     latexTargetSelect.value = state.latexTarget || 'A';
+  }
+  if (nimasTargetSelect.value !== (state.nimas?.target || 'A')) {
+    nimasTargetSelect.value = state.nimas?.target || 'A';
   }
 }
 
@@ -373,12 +542,115 @@ function renderLatexPreview(mathml) {
   node.textContent = mathml || '';
 }
 
+function setNimasStatus(message, state = 'idle') {
+  const node = document.querySelector('#nimas-status');
+  if (!node) {
+    return;
+  }
+  node.textContent = message;
+  node.className = `small-note status-${state}`;
+}
+
+function renderNimasPanel(state) {
+  const select = document.querySelector('#nimas-instance-select');
+  const meta = document.querySelector('#nimas-instance-meta');
+  const preview = document.querySelector('#nimas-image-preview');
+  const instances = state.nimas?.instances || [];
+  setNimasStatus(state.nimas?.status || 'No NIMAS source loaded yet.', state.nimas?.statusLevel || 'idle');
+
+  const currentValue = select.value;
+  select.innerHTML = '';
+  for (const instance of instances) {
+    const option = document.createElement('option');
+    option.value = String(instance.index);
+    option.textContent = `${instance.id}${instance.alttext ? ` - ${truncate(instance.alttext, 56)}` : ''}`;
+    select.append(option);
+  }
+
+  const selectedIndex = state.nimas?.selectedIndex ?? -1;
+  if (instances.length === 0) {
+    meta.textContent = 'No MathML instances loaded.';
+    preview.classList.add('hidden');
+    preview.removeAttribute('src');
+    return;
+  }
+
+  const selected = instances.find((entry) => entry.index === selectedIndex) || instances[0];
+  if (currentValue !== String(selected.index)) {
+    select.value = String(selected.index);
+  }
+  const altText = selected.alttext ? ` alttext: ${selected.alttext}` : '';
+  const altImg = selected.altimg ? ` altimg: ${selected.altimg}` : '';
+  meta.textContent = `Selected ${selected.id}.${altImg}${altText}`;
+
+  if (selected.imageUrl) {
+    preview.src = selected.imageUrl;
+    preview.alt = selected.alttext || `Image for ${selected.id}`;
+    preview.title = 'Click to open full-size image';
+    preview.classList.remove('hidden');
+  } else {
+    preview.classList.add('hidden');
+    preview.removeAttribute('src');
+    preview.removeAttribute('title');
+  }
+}
+
+function openNimasImageModal(backdrop, imageNode, zoomRange, zoomValue, src, alt) {
+  zoomRange.value = '100';
+  zoomValue.textContent = '100%';
+  imageNode.dataset.naturalWidth = '';
+  imageNode.style.width = '';
+  imageNode.src = src;
+  imageNode.alt = alt || 'NIMAS image full size preview';
+  backdrop.classList.remove('hidden');
+  backdrop.setAttribute('aria-hidden', 'false');
+}
+
+function closeNimasImageModal(backdrop, imageNode, zoomRange, zoomValue) {
+  backdrop.classList.add('hidden');
+  backdrop.setAttribute('aria-hidden', 'true');
+  zoomRange.value = '100';
+  zoomValue.textContent = '100%';
+  imageNode.style.width = '';
+  imageNode.dataset.naturalWidth = '';
+  imageNode.removeAttribute('src');
+}
+
+function applyNimasImageZoom(imageNode, zoomRange, zoomValue) {
+  const zoom = clampZoom(Number(zoomRange.value) || 100);
+  zoomRange.value = String(zoom);
+  zoomValue.textContent = `${zoom}%`;
+
+  const naturalWidth = Number(imageNode.dataset.naturalWidth || 0);
+  if (!naturalWidth) {
+    return;
+  }
+
+  const scaledWidth = Math.max(1, Math.round((naturalWidth * zoom) / 100));
+  imageNode.style.width = `${scaledWidth}px`;
+}
+
+function clampZoom(value) {
+  return Math.min(400, Math.max(100, value));
+}
+
+function truncate(value, max) {
+  const text = String(value || '');
+  return text.length > max ? `${text.slice(0, max - 1)}...` : text;
+}
+
 function renderStatus(state) {
   const status = document.querySelector('#status-json');
   const summary = {
     schemaVersion: state.schemaVersion,
     mathjax: state.mathjax,
     lintProfile: state.lintProfile,
+    nimas: {
+      sourceLabel: state.nimas?.sourceLabel || '',
+      status: state.nimas?.status || '',
+      instances: state.nimas?.instances?.length || 0,
+      selectedIndex: state.nimas?.selectedIndex ?? -1
+    },
     lengths: {
       mathmlA: state.mathmlA.length,
       mathmlB: state.mathmlB.length,
@@ -794,6 +1066,7 @@ function wireStateSideEffects(store, bus) {
     renderAccessibilityPanels(state);
     renderAnalysisPanels(state);
     renderOutputDiff(state);
+    renderNimasPanel(state);
     renderScheduler.schedule();
   });
 }
@@ -818,6 +1091,7 @@ function bootstrap() {
   renderAccessibilityPanels(store.getState());
   renderAnalysisPanels(store.getState());
   renderOutputDiff(store.getState());
+  renderNimasPanel(store.getState());
   renderLatexPreview('');
   setPersistenceStatus(queryHydrated.message || 'Ready.', queryHydrated.level || 'idle');
   setLatexStatus('LaTeX conversion idle.', 'idle');

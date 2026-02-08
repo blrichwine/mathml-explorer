@@ -4,6 +4,7 @@ const SPEC_LINKS = {
   presentation: 'https://w3c.github.io/mathml/#presentation-markup',
   syntax: 'https://w3c.github.io/mathml/#fundamentals'
 };
+const MATHML_NAMESPACE = 'http://www.w3.org/1998/Math/MathML';
 
 const GLOBAL_ATTRIBUTES = new Set([
   'class',
@@ -22,11 +23,53 @@ const GLOBAL_ATTRIBUTES = new Set([
 
 const TOKEN_ELEMENTS = new Set(['mi', 'mn', 'mo', 'mtext']);
 const DEPRECATED_TAGS = new Set(['mfenced', 'mstyle']);
+const ELEMENT_COMPAT = {
+  math: { tier: 'core', note: 'Core presentation root.' },
+  mrow: { tier: 'core', note: 'Core grouping construct.' },
+  mi: { tier: 'core', note: 'Core token element.' },
+  mn: { tier: 'core', note: 'Core token element.' },
+  mo: { tier: 'core', note: 'Core operator element.' },
+  mtext: { tier: 'core', note: 'Core token element.' },
+  mspace: { tier: 'core', note: 'Core spacing element.' },
+  mfrac: { tier: 'core', note: 'Core fraction element.' },
+  msup: { tier: 'core', note: 'Core script element.' },
+  msub: { tier: 'core', note: 'Core script element.' },
+  msubsup: { tier: 'core', note: 'Core script element.' },
+  msqrt: { tier: 'core', note: 'Core radical element.' },
+  mroot: { tier: 'core', note: 'Core radical element.' },
+  mtable: { tier: 'core', note: 'Core table structure.' },
+  mtr: { tier: 'core', note: 'Core table row.' },
+  mtd: { tier: 'core', note: 'Core table cell.' },
+  mlabeledtr: { tier: 'at-risk', note: 'Support varies across browser engines/platform wrappers.' },
+
+  semantics: { tier: 'non-core', note: 'Outside MathML Core browser-focused subset.' },
+  annotation: { tier: 'non-core', note: 'Outside MathML Core browser-focused subset.' },
+  'annotation-xml': { tier: 'non-core', note: 'Outside MathML Core browser-focused subset.' },
+  mfenced: { tier: 'at-risk', note: 'Legacy/deprecated usage pattern.' },
+  mstyle: { tier: 'at-risk', note: 'Legacy/deprecated usage pattern.' },
+  menclose: { tier: 'at-risk', note: 'Not consistently supported in all browser-derived renderers.' },
+  mpadded: { tier: 'at-risk', note: 'Not consistently supported in all browser-derived renderers.' },
+  mphantom: { tier: 'at-risk', note: 'Not consistently supported in all browser-derived renderers.' },
+  maction: { tier: 'non-core', note: 'Interactive actions are commonly unsupported in browser MathML pipelines.' },
+  merror: { tier: 'at-risk', note: 'Not consistently exposed/rendered in eTextbook pipelines.' }
+};
+
+const ATTRIBUTE_COMPAT = {
+  encoding: { tier: 'non-core', note: 'Commonly tied to non-core annotation workflows.' },
+  src: { tier: 'non-core', note: 'External annotation source behavior varies by host platform.' },
+  actiontype: { tier: 'non-core', note: 'Associated with maction (non-core).' },
+  selection: { tier: 'non-core', note: 'Associated with maction (non-core).' },
+  scriptminsize: { tier: 'at-risk', note: 'Legacy styling control with uneven support.' },
+  scriptsizemultiplier: { tier: 'at-risk', note: 'Legacy styling control with uneven support.' }
+};
 
 const CHILDREN_PRESENTATION = ['mrow', 'mi', 'mn', 'mo', 'mtext', 'mspace', 'mfrac', 'msup', 'msub', 'msubsup', 'msqrt', 'mroot', 'mtable', 'semantics'];
 
 const TAG_RULES = {
-  math: { children: [...CHILDREN_PRESENTATION], attributes: ['xmlns', 'display', 'intent'] },
+  math: {
+    children: [...CHILDREN_PRESENTATION],
+    attributes: ['xmlns', 'display', 'intent', 'altimg', 'alttext', 'altimg-width', 'altimg-height', 'altimg-valign']
+  },
   mrow: { children: [...CHILDREN_PRESENTATION, 'mrow'], attributes: ['intent'] },
   mi: { children: [], attributes: ['mathvariant', 'intent'] },
   mn: { children: [], attributes: ['intent'] },
@@ -50,6 +93,75 @@ const TAG_RULES = {
   mstyle: { children: ['any'], attributes: ['displaystyle', 'scriptlevel'] }
 };
 
+const ATTRIBUTE_VALUE_RULES = [
+  {
+    attr: 'display',
+    tags: new Set(['math']),
+    expected: '"block" or "inline"',
+    validate: (value) => value === 'block' || value === 'inline'
+  },
+  {
+    attr: 'dir',
+    tags: null,
+    expected: '"ltr", "rtl", or "auto"',
+    validate: (value) => value === 'ltr' || value === 'rtl' || value === 'auto'
+  },
+  {
+    attr: 'form',
+    tags: new Set(['mo']),
+    expected: '"prefix", "infix", or "postfix"',
+    validate: (value) => value === 'prefix' || value === 'infix' || value === 'postfix'
+  },
+  {
+    attr: 'fence',
+    tags: new Set(['mo']),
+    expected: '"true" or "false"',
+    validate: isBooleanToken
+  },
+  {
+    attr: 'separator',
+    tags: new Set(['mo']),
+    expected: '"true" or "false"',
+    validate: isBooleanToken
+  },
+  {
+    attr: 'stretchy',
+    tags: new Set(['mo']),
+    expected: '"true" or "false"',
+    validate: isBooleanToken
+  },
+  {
+    attr: 'symmetric',
+    tags: new Set(['mo']),
+    expected: '"true" or "false"',
+    validate: isBooleanToken
+  },
+  {
+    attr: 'bevelled',
+    tags: new Set(['mfrac']),
+    expected: '"true" or "false"',
+    validate: isBooleanToken
+  },
+  {
+    attr: 'displaystyle',
+    tags: new Set(['mstyle']),
+    expected: '"true" or "false"',
+    validate: isBooleanToken
+  },
+  {
+    attr: 'columnalign',
+    tags: new Set(['mtable']),
+    expected: 'space-separated values from "left", "center", "right", "decimalpoint"',
+    validate: (value) => isTokenList(value, new Set(['left', 'center', 'right', 'decimalpoint']))
+  },
+  {
+    attr: 'rowalign',
+    tags: new Set(['mtable']),
+    expected: 'space-separated values from "top", "bottom", "center", "baseline", "axis"',
+    validate: (value) => isTokenList(value, new Set(['top', 'bottom', 'center', 'baseline', 'axis']))
+  }
+];
+
 function runLint(mathmlSource, options = {}) {
   const source = String(mathmlSource || '');
   const findings = [];
@@ -72,15 +184,19 @@ function runLint(mathmlSource, options = {}) {
   const root = doc.documentElement;
   if (normalize(root.tagName) !== 'math') {
     findings.push(makeFinding('warn', 'L003', 'Unexpected root', `Root element is <${root.tagName}>. A top-level <math> is recommended.`, SPEC_LINKS.presentation));
+  } else {
+    validateMathRootNamespace(findings, root);
   }
 
   const allElements = [...doc.querySelectorAll('*')];
   for (const node of allElements) {
     validateTag(findings, node, profile);
     validateAttributes(findings, node);
+    validateAttributeValues(findings, node);
     validateChildren(findings, node);
     validateArity(findings, node);
     validateTokenContent(findings, node);
+    validateCoreCompatibility(findings, node, profile);
     validateSemanticsHints(findings, node, profile);
   }
 
@@ -92,6 +208,37 @@ function runLint(mathmlSource, options = {}) {
     sourceLength: source.length,
     findings: dedupeFindings(findings)
   };
+}
+
+function validateMathRootNamespace(findings, root) {
+  const rawTag = String(root.tagName || '');
+  const xmlns = root.getAttribute('xmlns');
+
+  // Mild warning only for an unprefixed <math> root missing the default MathML namespace.
+  if (!xmlns && rawTag.toLowerCase() === 'math') {
+    findings.push(
+      makeFinding(
+        'warn',
+        'L004',
+        'Missing namespace declaration',
+        `Root <math> is missing xmlns="${MATHML_NAMESPACE}".`,
+        SPEC_LINKS.syntax
+      )
+    );
+    return;
+  }
+
+  if (typeof xmlns === 'string' && xmlns.trim() && xmlns.trim() !== MATHML_NAMESPACE) {
+    findings.push(
+      makeFinding(
+        'warn',
+        'L005',
+        'Unexpected MathML namespace',
+        `Root <math> has xmlns="${xmlns}", expected "${MATHML_NAMESPACE}".`,
+        SPEC_LINKS.syntax
+      )
+    );
+  }
 }
 
 function validateTag(findings, node, profile) {
@@ -121,6 +268,43 @@ function validateAttributes(findings, node) {
 
     if (!allowed.has(attrName)) {
       findings.push(makeFinding('warn', 'L020', 'Unknown attribute', `Attribute "${attrName}" is not recognized on <${tag}>.`, SPEC_LINKS.presentation));
+    }
+  }
+}
+
+function validateAttributeValues(findings, node) {
+  const tag = normalize(node.tagName);
+
+  for (const attr of [...node.attributes]) {
+    const attrName = normalize(attr.name);
+    const value = String(attr.value || '').trim();
+    const rules = ATTRIBUTE_VALUE_RULES.filter((rule) => rule.attr === attrName && (!rule.tags || rule.tags.has(tag)));
+
+    for (const rule of rules) {
+      if (!value) {
+        findings.push(
+          makeFinding(
+            'warn',
+            'L021',
+            'Invalid attribute value',
+            `Attribute "${attr.name}" on <${tag}> should be ${rule.expected}, but it is empty.`,
+            SPEC_LINKS.presentation
+          )
+        );
+        continue;
+      }
+
+      if (!rule.validate(normalize(value), value)) {
+        findings.push(
+          makeFinding(
+            'warn',
+            'L021',
+            'Invalid attribute value',
+            `Attribute "${attr.name}" on <${tag}> has value "${attr.value}". Expected ${rule.expected}.`,
+            SPEC_LINKS.presentation
+          )
+        );
+      }
     }
   }
 }
@@ -170,6 +354,52 @@ function validateTokenContent(findings, node) {
   }
 }
 
+function validateCoreCompatibility(findings, node, profile) {
+  const tag = normalize(node.tagName);
+  const elementCompat = ELEMENT_COMPAT[tag];
+
+  if (elementCompat?.tier === 'non-core') {
+    findings.push(
+      makeFinding(
+        profile === 'strict-core' ? 'warn' : 'info',
+        'L070',
+        'Outside MathML Core',
+        `<${tag}> is outside the MathML Core browser-focused subset. ${elementCompat.note}`,
+        SPEC_LINKS.core
+      )
+    );
+  } else if (elementCompat?.tier === 'at-risk') {
+    findings.push(
+      makeFinding(
+        profile === 'strict-core' ? 'warn' : 'info',
+        'L072',
+        'At-risk browser compatibility',
+        `<${tag}> is in a compatibility gray-zone for browser-engine/eTextbook pipelines. ${elementCompat.note}`,
+        SPEC_LINKS.core
+      )
+    );
+  }
+
+  for (const attr of [...node.attributes]) {
+    const attrName = normalize(attr.name);
+    const attrCompat = ATTRIBUTE_COMPAT[attrName];
+    if (!attrCompat) {
+      continue;
+    }
+    const code = attrCompat.tier === 'non-core' ? 'L071' : 'L073';
+    const title = attrCompat.tier === 'non-core' ? 'Potential non-core attribute' : 'At-risk attribute compatibility';
+    findings.push(
+      makeFinding(
+        profile === 'strict-core' ? 'warn' : 'info',
+        code,
+        title,
+        `Attribute \"${attr.name}\" on <${tag}> may not be consistently supported in browser-focused MathML pipelines. ${attrCompat.note}`,
+        SPEC_LINKS.core
+      )
+    );
+  }
+}
+
 function validateSemanticsHints(findings, node, profile) {
   if (profile === 'strict-core') {
     return;
@@ -212,6 +442,23 @@ function normalize(value) {
 
 function normalizeProfile(profile) {
   return profile === 'strict-core' ? 'strict-core' : 'authoring-guidance';
+}
+
+function isBooleanToken(value) {
+  return value === 'true' || value === 'false';
+}
+
+function isTokenList(value, allowedTokens) {
+  const tokens = String(value || '')
+    .split(/\s+/)
+    .map((token) => token.trim())
+    .filter(Boolean);
+
+  if (!tokens.length) {
+    return false;
+  }
+
+  return tokens.every((token) => allowedTokens.has(token));
 }
 
 export { runLint };

@@ -72,6 +72,37 @@
             </div>
           </details>
 
+          <details class="nimas-section latex-section panel" aria-label="NIMAS Import">
+            <summary>NIMAS Import</summary>
+            <div class="latex-content">
+              <div class="section-head">
+                <h2>NIMAS Import</h2>
+                <div class="button-row">
+                  <button id="nimas-load-folder-button" type="button" class="secondary-button">Load Folder</button>
+                  <button id="nimas-load-file-button" type="button" class="secondary-button">Load XML</button>
+                  <input id="nimas-file-input" type="file" accept=".xml,application/xml,text/xml,.zip,application/zip" hidden />
+                </div>
+              </div>
+              <p id="nimas-status" class="small-note">No NIMAS source loaded yet.</p>
+              <div class="nimas-controls">
+                <label>
+                  MathML Instance
+                  <select id="nimas-instance-select" name="nimas-instance-select"></select>
+                </label>
+                <label>
+                  Import Target
+                  <select id="nimas-target-select" name="nimas-target-select">
+                    <option value="A">MathML A</option>
+                    <option value="B">MathML B</option>
+                  </select>
+                </label>
+                <button id="nimas-import-button" type="button">Import Selected MathML</button>
+              </div>
+              <p id="nimas-instance-meta" class="small-note"></p>
+              <img id="nimas-image-preview" class="nimas-image hidden" alt="NIMAS linked image preview" />
+            </div>
+          </details>
+
           <div class="section-head">
             <h2>MathML Inputs</h2>
             <div class="button-row">
@@ -286,6 +317,25 @@
           </div>
         </div>
         <textarea id="editor-modal-input" class="modal-input" spellcheck="false" aria-label="Large MathML editor"></textarea>
+      </section>
+    </div>
+
+    <div id="nimas-image-modal-backdrop" class="modal-backdrop hidden" aria-hidden="true">
+      <section class="modal-panel nimas-image-modal-panel" role="dialog" aria-modal="true" aria-labelledby="nimas-image-modal-title">
+        <div class="modal-head">
+          <h2 id="nimas-image-modal-title">NIMAS Linked Image</h2>
+          <div class="button-row">
+            <label>
+              Zoom
+              <input id="nimas-image-zoom-range" type="range" min="100" max="400" step="25" value="100" />
+            </label>
+            <span id="nimas-image-zoom-value" class="small-note">100%</span>
+            <button id="nimas-image-modal-close" type="button">Close</button>
+          </div>
+        </div>
+        <div class="nimas-image-modal-body">
+          <img id="nimas-image-modal-view" class="nimas-image-modal-view" alt="NIMAS image full size preview" />
+        </div>
       </section>
     </div>
 

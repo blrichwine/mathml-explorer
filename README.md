@@ -51,6 +51,11 @@ M7 is implemented:
 - `ls` LaTeX setup (base64url-encoded)
 - `lx` LaTeX input (base64url-encoded)
 
+## Linter Docs
+
+- Linter architecture and rule IDs: `/Users/brian/dev/cdx/mathml-explorer/LINTER.md`
+- Browser/eTextbook compatibility map: `/Users/brian/dev/cdx/mathml-explorer/BROWSER_COMPATIBILITY.md`
+
 ## Runtime Notes
 
 - SRE is loaded from CDN by default.

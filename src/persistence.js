@@ -107,6 +107,11 @@ function mergeWithFallback(fallbackState, parsed) {
       ...fallbackState.diff,
       ...(parsed.diff || {})
     },
+    nimas: {
+      ...fallbackState.nimas,
+      ...(parsed.nimas || {}),
+      instances: Array.isArray(parsed?.nimas?.instances) ? parsed.nimas.instances : fallbackState.nimas.instances
+    },
     meta: {
       ...fallbackState.meta,
       ...(parsed.meta || {})
