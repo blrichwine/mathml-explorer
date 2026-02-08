@@ -17,6 +17,7 @@
   --warn: #b44f1c;
   --error: #a11212;
   --ok: #1f6f3d;
+  --render-zoom: 1;
 }
 
 * {
@@ -373,6 +374,8 @@ button:hover {
 .render-surface {
   min-height: 110px;
   overflow: auto;
+  font-size: calc(1rem * var(--render-zoom));
+  line-height: 1.25;
 }
 
 .mathjax-status {

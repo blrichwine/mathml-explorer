@@ -83,6 +83,7 @@ function createInitialState() {
     },
     lintProfile: 'authoring-guidance',
     ignoreDataMjxAttributes: true,
+    renderZoom: 100,
     intentSuggestions: {
       A: [],
       B: []
@@ -166,6 +167,8 @@ function wireControls(store) {
   const modeSelect = document.querySelector('#mathjax-output-mode-select');
   const lintProfileSelect = document.querySelector('#lint-profile-select');
   const ignoreDataMjxToggle = document.querySelector('#ignore-data-mjx-toggle');
+  const renderZoomSlider = document.querySelector('#render-zoom-slider');
+  const renderZoomValue = document.querySelector('#render-zoom-value');
   const diffChannelSelect = document.querySelector('#diff-channel-select');
   const diffViewSelect = document.querySelector('#diff-view-select');
   const shareButton = document.querySelector('#share-url-button');
@@ -221,6 +224,14 @@ function wireControls(store) {
   ignoreDataMjxToggle.addEventListener('change', () => {
     store.setState((draft) => {
       draft.ignoreDataMjxAttributes = Boolean(ignoreDataMjxToggle.checked);
+    });
+  });
+
+  renderZoomSlider.addEventListener('input', () => {
+    const zoom = clampRenderZoom(Number(renderZoomSlider.value) || 100);
+    renderZoomValue.textContent = `${zoom}%`;
+    store.setState((draft) => {
+      draft.renderZoom = zoom;
     });
   });
 
@@ -610,6 +621,9 @@ function wireControls(store) {
   modeSelect.value = current.mathjax.outputMode;
   lintProfileSelect.value = current.lintProfile || 'authoring-guidance';
   ignoreDataMjxToggle.checked = Boolean(current.ignoreDataMjxAttributes);
+  const zoom = clampRenderZoom(Number(current.renderZoom) || 100);
+  renderZoomSlider.value = String(zoom);
+  renderZoomValue.textContent = `${zoom}%`;
   diffChannelSelect.value = current.diff.channelId;
   if (!diffChannelSelect.value && diffChannelSelect.options.length > 0) {
     diffChannelSelect.value = diffChannelSelect.options[0].value;
@@ -630,6 +644,8 @@ function syncControlValues(state) {
   const modeSelect = document.querySelector('#mathjax-output-mode-select');
   const lintProfileSelect = document.querySelector('#lint-profile-select');
   const ignoreDataMjxToggle = document.querySelector('#ignore-data-mjx-toggle');
+  const renderZoomSlider = document.querySelector('#render-zoom-slider');
+  const renderZoomValue = document.querySelector('#render-zoom-value');
   const diffChannelSelect = document.querySelector('#diff-channel-select');
   const diffViewSelect = document.querySelector('#diff-view-select');
   const latexSetupInput = document.querySelector('#latex-setup-input');
@@ -649,6 +665,13 @@ function syncControlValues(state) {
   }
   if (ignoreDataMjxToggle.checked !== Boolean(state.ignoreDataMjxAttributes)) {
     ignoreDataMjxToggle.checked = Boolean(state.ignoreDataMjxAttributes);
+  }
+  const zoom = clampRenderZoom(Number(state.renderZoom) || 100);
+  if (Number(renderZoomSlider.value) !== zoom) {
+    renderZoomSlider.value = String(zoom);
+  }
+  if (renderZoomValue.textContent !== `${zoom}%`) {
+    renderZoomValue.textContent = `${zoom}%`;
   }
   if (diffChannelSelect.value !== state.diff.channelId) {
     diffChannelSelect.value = state.diff.channelId;
@@ -860,6 +883,7 @@ function renderStatus(state) {
     mathjax: state.mathjax,
     lintProfile: state.lintProfile,
     ignoreDataMjxAttributes: Boolean(state.ignoreDataMjxAttributes),
+    renderZoom: clampRenderZoom(Number(state.renderZoom) || 100),
     nimas: {
       sourceLabel: state.nimas?.sourceLabel || '',
       status: state.nimas?.status || '',
@@ -993,6 +1017,11 @@ function buildDiffSpan(type, value) {
   span.className = `diff-${type}`;
   span.textContent = value;
   return span;
+}
+
+function applyRenderZoom(state) {
+  const zoom = clampRenderZoom(Number(state.renderZoom) || 100);
+  document.documentElement.style.setProperty('--render-zoom', String(zoom / 100));
 }
 
 function createRenderScheduler(store) {
@@ -1290,6 +1319,7 @@ function wireStateSideEffects(store, bus) {
     syncControlValues(state);
     renderStatus(state);
     renderMathJaxLoadStatus(state);
+    applyRenderZoom(state);
     renderAccessibilityPanels(state);
     renderAnalysisPanels(state);
     renderOutputDiff(state);
@@ -1319,6 +1349,7 @@ function bootstrap() {
 
   renderStatus(store.getState());
   renderMathJaxLoadStatus(store.getState());
+  applyRenderZoom(store.getState());
   renderAccessibilityPanels(store.getState());
   renderAnalysisPanels(store.getState());
   renderOutputDiff(store.getState());
@@ -1333,3 +1364,7 @@ function bootstrap() {
 bootstrap();
 
 export { MATHJAX_VERSIONS, createInitialState };
+
+function clampRenderZoom(value) {
+  return Math.min(400, Math.max(100, Math.round(value)));
+}

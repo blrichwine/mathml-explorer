@@ -517,8 +517,8 @@ function buildSyntaxHighlightedHtml(source) {
       return `<span class="token-comment">${comment}</span>`;
     }
 
-    const highlightedAttributes = attributeChunk.replace(/([a-zA-Z_:][\w:.-]*)(\s*=\s*)"([^"]*)"/g, (_, attrName, equalSign, attrValue) => {
-      return `<span class="token-attr-name">${attrName}</span>${equalSign}<span class="token-attr-value">"${attrValue}"</span>`;
+    const highlightedAttributes = attributeChunk.replace(/([a-zA-Z_:][\w:.-]*)(\s*=\s*)(["'])([\s\S]*?)\3/g, (_match, attrName, equalSign, quote, attrValue) => {
+      return `<span class="token-attr-name">${attrName}</span>${equalSign}<span class="token-attr-value">${quote}${attrValue}${quote}</span>`;
     });
 
     return `<span class="token-tag">${tagOpen}</span>${highlightedAttributes}<span class="token-tag">${tagClose}</span>`;
@@ -559,7 +559,7 @@ function collectWarnings(source, options = {}) {
     }
 
     const attrChunk = match[2] || '';
-    const attributes = [...attrChunk.matchAll(/([a-zA-Z_:][\w:.-]*)\s*=\s*"([^"]*)"/g)].map((attrMatch) => attrMatch[1]);
+    const attributes = [...attrChunk.matchAll(/([a-zA-Z_:][\w:.-]*)\s*=\s*(["'])([\s\S]*?)\2/g)].map((attrMatch) => attrMatch[1]);
     const allowed = new Set([...(MATHML_REFERENCE[rawTag]?.attributes || []), ...GLOBAL_ATTRIBUTES]);
 
     for (const attr of attributes) {
