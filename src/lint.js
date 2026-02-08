@@ -242,6 +242,7 @@ function runLint(mathmlSource, options = {}) {
     validatePotentialSplitNumberLiteral(findings, node);
     validateSuspiciousScriptBase(findings, node);
     validatePotentialPlainLanguageMiRuns(findings, node);
+    validateAmbiguousLargeOperatorOperand(findings, node);
     validateChildren(findings, node);
     validateArity(findings, node);
     validateTokenContent(findings, node);
@@ -393,6 +394,40 @@ function validatePotentialPlainLanguageMiRuns(findings, node) {
         'L026',
         'Potential plain-language text in <mi> tokens',
         `Detected <mi> letter run "${word}" (${run.length} tokens). Consider using <mtext> or adding intent if this is a word rather than symbolic identifiers.`,
+        SPEC_LINKS.intent
+      )
+    );
+  }
+}
+
+function validateAmbiguousLargeOperatorOperand(findings, node) {
+  const children = [...node.children];
+  if (children.length < 2) {
+    return;
+  }
+
+  for (let i = 0; i < children.length; i += 1) {
+    const current = children[i];
+    if (!isLargeOperatorConstruct(current)) {
+      continue;
+    }
+
+    const following = children.slice(i + 1);
+    if (following.length < 2) {
+      continue;
+    }
+
+    const firstFollowingTag = normalize(following[0].tagName);
+    if (firstFollowingTag === 'mrow') {
+      continue;
+    }
+
+    findings.push(
+      makeFinding(
+        'warn',
+        'L027',
+        'Potential ambiguous large-operator operand',
+        `A large-operator construct is followed by an ungrouped operand sequence. Consider wrapping the intended operand in <mrow> for clear structure and speech output.`,
         SPEC_LINKS.intent
       )
     );
@@ -648,6 +683,8 @@ function normalizeProfile(profile) {
 
 const SCRIPT_BASE_TAGS = new Set(['msup', 'msub', 'msubsup', 'mover', 'munder', 'munderover', 'mmultiscripts']);
 const CLOSING_FENCE_TOKENS = new Set([')', ']', '}', '\u27e9', '\u27eb', '\u3009', '\u300b', '\u300d', '\u300f', '\u3011', '\u3015', '\u3017', '\u3019', '\u301b']);
+const LARGE_OPERATOR_SYMBOLS = new Set(['∑', '∏', '∫', '∮', '⋃', '⋂']);
+const LARGE_OPERATOR_WORDS = new Set(['lim']);
 const LIKELY_PLAIN_TEXT_WORDS = new Set([
   'and',
   'but',
@@ -684,6 +721,38 @@ function isTokenList(value, allowedTokens) {
 function isNumericToken(value) {
   const text = String(value || '').trim();
   return /^\d+(?:\.\d+)?$/.test(text);
+}
+
+function isLargeOperatorConstruct(node) {
+  const tag = normalize(node.tagName);
+  if (isLargeOperatorTokenNode(node)) {
+    return true;
+  }
+
+  if (tag === 'munderover' || tag === 'munder' || tag === 'mover' || tag === 'msubsup' || tag === 'msub' || tag === 'msup') {
+    const base = node.children[0];
+    return Boolean(base && isLargeOperatorTokenNode(base));
+  }
+
+  return false;
+}
+
+function isLargeOperatorTokenNode(node) {
+  const tag = normalize(node.tagName);
+  if (tag !== 'mo' && tag !== 'mi' && tag !== 'mtext') {
+    return false;
+  }
+
+  const token = String(node.textContent || '').trim();
+  if (!token) {
+    return false;
+  }
+
+  if (LARGE_OPERATOR_SYMBOLS.has(token)) {
+    return true;
+  }
+
+  return LARGE_OPERATOR_WORDS.has(token.toLowerCase());
 }
 
 function collectLowercaseMiRuns(children) {
