@@ -239,6 +239,7 @@ function runLint(mathmlSource, options = {}) {
     validateAttributes(findings, node, { ignoreDataMjxAttributes });
     validateAttributeValues(findings, node);
     validateMathvariantUsage(findings, node);
+    validatePotentialSplitNumberLiteral(findings, node);
     validateChildren(findings, node);
     validateArity(findings, node);
     validateTokenContent(findings, node);
@@ -288,6 +289,55 @@ function validateMathvariantUsage(findings, node) {
       )
     );
   }
+}
+
+function validatePotentialSplitNumberLiteral(findings, node) {
+  const children = [...node.children];
+  if (children.length < 3) {
+    return;
+  }
+
+  const operatorChildren = children.filter((child) => normalize(child.tagName) === 'mo');
+  if (!operatorChildren.length) {
+    return;
+  }
+
+  const onlyCommaOperators = operatorChildren.every((child) => child.textContent.trim() === ',');
+  if (!onlyCommaOperators) {
+    return;
+  }
+
+  let runCount = 0;
+  for (let i = 0; i <= children.length - 3; i += 1) {
+    const left = children[i];
+    const middle = children[i + 1];
+    const right = children[i + 2];
+    if (
+      normalize(left.tagName) === 'mn' &&
+      normalize(middle.tagName) === 'mo' &&
+      normalize(right.tagName) === 'mn' &&
+      isNumericToken(left.textContent) &&
+      middle.textContent.trim() === ',' &&
+      isNumericToken(right.textContent)
+    ) {
+      runCount += 1;
+    }
+  }
+
+  if (!runCount) {
+    return;
+  }
+
+  const tag = normalize(node.tagName);
+  findings.push(
+    makeFinding(
+      'warn',
+      'L024',
+      'Potential split number literal',
+      `<${tag}> contains ${runCount} comma-separated <mn>/<mo>/<mn> run(s). If this is one formatted number (e.g., 200,300.87), consider a single <mn> token.`,
+      SPEC_LINKS.presentation
+    )
+  );
 }
 
 function validateMathRootNamespace(findings, root) {
@@ -500,7 +550,11 @@ function validateSemanticsHints(findings, node, profile) {
     findings.push(makeFinding('info', 'L060', 'Semantics hint', 'Large <mrow> group has no intent. Consider intent for disambiguation.', SPEC_LINKS.intent));
   }
 
-  if ((tag === 'mi' || tag === 'mn') && node.textContent.trim().length > 1 && !node.hasAttribute('intent')) {
+  if (tag === 'mi' && node.textContent.trim().length > 1 && !node.hasAttribute('intent')) {
+    findings.push(makeFinding('info', 'L061', 'Semantics hint', `<${tag}> with multi-character token may need explicit intent depending on meaning.`, SPEC_LINKS.intent));
+  }
+
+  if (tag === 'mn' && node.textContent.trim().length > 1 && !node.hasAttribute('intent') && !looksLikeNumericLiteral(node.textContent)) {
     findings.push(makeFinding('info', 'L061', 'Semantics hint', `<${tag}> with multi-character token may need explicit intent depending on meaning.`, SPEC_LINKS.intent));
   }
 
@@ -548,6 +602,19 @@ function isTokenList(value, allowedTokens) {
   }
 
   return tokens.every((token) => allowedTokens.has(token));
+}
+
+function isNumericToken(value) {
+  const text = String(value || '').trim();
+  return /^\d+(?:\.\d+)?$/.test(text);
+}
+
+function looksLikeNumericLiteral(value) {
+  const text = String(value || '').trim();
+  if (!text) {
+    return false;
+  }
+  return /^[+-]?(?:\d+|\d+\.\d+|\d+,\d+|\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+\.\d+e[+-]?\d+)$/i.test(text);
 }
 
 export { runLint };
