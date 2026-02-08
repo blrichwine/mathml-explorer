@@ -1,3 +1,5 @@
+import { lookupUnicodeNameByCodePoint } from './unicode.js';
+
 const MATHML_SAMPLE = `<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
   <mrow>
     <msup>
@@ -22,6 +24,19 @@ const GLOBAL_ATTRIBUTES = [
   'intent',
   'arg'
 ];
+
+const ENTITY_REFERENCE_DESCRIPTIONS = {
+  sum: 'summation operator',
+  prod: 'product operator',
+  int: 'integral operator',
+  InvisibleTimes: 'invisible multiplication operator',
+  ApplyFunction: 'function application marker',
+  NoBreak: 'no-break control',
+  ThinSpace: 'thin space',
+  MediumSpace: 'medium space',
+  ThickSpace: 'thick space',
+  NonBreakingSpace: 'non-breaking space'
+};
 
 const MATHML_REFERENCE = {
   math: {
@@ -142,6 +157,7 @@ function createEditorController(store, bus) {
   const aWarnings = document.querySelector('#mathml-a-warnings');
   const bWarnings = document.querySelector('#mathml-b-warnings');
   const contextSummary = document.querySelector('#context-summary');
+  const contextEntitySummary = document.querySelector('#context-entity-summary');
   const childList = document.querySelector('#context-children-list');
   const attrList = document.querySelector('#context-attributes-list');
   const formatAButton = document.querySelector('#format-a-button');
@@ -183,11 +199,11 @@ function createEditorController(store, bus) {
     });
 
     editor.input.addEventListener('click', () => {
-      updateContextForEditor(key, store, editor, contextSummary, childList, attrList);
+      updateContextForEditor(key, store, editor, contextSummary, contextEntitySummary, childList, attrList);
       updateIntentAssistantForEditor(key, store, editor, intentTarget);
     });
     editor.input.addEventListener('keyup', () => {
-      updateContextForEditor(key, store, editor, contextSummary, childList, attrList);
+      updateContextForEditor(key, store, editor, contextSummary, contextEntitySummary, childList, attrList);
       updateIntentAssistantForEditor(key, store, editor, intentTarget);
     });
     editor.input.addEventListener('scroll', () => syncHighlightScroll(editor));
@@ -195,7 +211,7 @@ function createEditorController(store, bus) {
       store.setState((draft) => {
         draft.selectedExpression = key;
       });
-      updateContextForEditor(key, store, editor, contextSummary, childList, attrList);
+      updateContextForEditor(key, store, editor, contextSummary, contextEntitySummary, childList, attrList);
       updateIntentAssistantForEditor(key, store, editor, intentTarget);
     });
   }
@@ -290,7 +306,7 @@ function createEditorController(store, bus) {
     renderWarnings(bWarnings, collectWarnings(state.mathmlB, warningOptions));
 
     const activeKey = state.selectedExpression === 'B' ? 'B' : 'A';
-    updateContextForEditor(activeKey, store, editorMap[activeKey], contextSummary, childList, attrList);
+    updateContextForEditor(activeKey, store, editorMap[activeKey], contextSummary, contextEntitySummary, childList, attrList);
     updateIntentAssistantForEditor(activeKey, store, editorMap[activeKey], intentTarget);
 
     if (modalState.activeKey === 'A' && modalInput.value !== state.mathmlA) {
@@ -585,14 +601,17 @@ function renderWarnings(listElement, warnings) {
   }
 }
 
-function updateContextForEditor(key, store, editor, contextSummary, childList, attrList) {
+function updateContextForEditor(key, store, editor, contextSummary, contextEntitySummary, childList, attrList) {
   const source = key === 'A' ? store.getState().mathmlA : store.getState().mathmlB;
   const cursor = editor.input.selectionStart || 0;
   const currentTag = findCurrentTagAtCursor(source, cursor);
+  const entity = findEntityAtCursor(source, cursor);
 
   contextSummary.textContent = currentTag
     ? `Expression ${key}: cursor is inside <${currentTag}>.`
     : `Expression ${key}: cursor is not inside a recognized tag.`;
+
+  renderEntitySummary(contextEntitySummary, entity);
 
   childList.innerHTML = '';
   attrList.innerHTML = '';
@@ -617,6 +636,97 @@ function updateContextForEditor(key, store, editor, contextSummary, childList, a
   for (const attr of attrs) {
     appendListItem(attrList, attr);
   }
+}
+
+function findEntityAtCursor(source, cursor) {
+  const text = String(source || '');
+  const entityRegex = /&(?:#x[0-9a-fA-F]+|#[0-9]+|[A-Za-z][\w.-]*);/g;
+
+  for (const match of text.matchAll(entityRegex)) {
+    const raw = match[0];
+    const start = match.index || 0;
+    const end = start + raw.length;
+    if (cursor < start || cursor > end) {
+      continue;
+    }
+    return {
+      raw,
+      start,
+      end,
+      description: describeEntity(raw),
+      codePoint: extractCodePointFromEntity(raw)
+    };
+  }
+
+  return null;
+}
+
+function describeEntity(raw) {
+  if (/^&#x/i.test(raw)) {
+    return `numeric hex character reference ${raw.slice(2, -1)}`;
+  }
+  if (/^&#/i.test(raw)) {
+    return `numeric decimal character reference ${raw.slice(2, -1)}`;
+  }
+
+  const name = raw.slice(1, -1);
+  return ENTITY_REFERENCE_DESCRIPTIONS[name] || `named entity "${name}"`;
+}
+
+function renderEntitySummary(node, entity) {
+  if (!entity) {
+    node.dataset.entityRaw = '';
+    node.textContent = 'Entity: cursor is not inside an entity reference.';
+    return;
+  }
+
+  node.dataset.entityRaw = entity.raw;
+  const baseText = `Entity: ${entity.raw} (${entity.description}).`;
+  node.textContent = baseText;
+
+  if (!Number.isFinite(entity.codePoint)) {
+    return;
+  }
+
+  const codePointHex = `U+${entity.codePoint.toString(16).toUpperCase().padStart(4, '0')}`;
+  node.textContent = `Entity: ${entity.raw} (${entity.description}; ${codePointHex}).`;
+
+  enrichEntitySummaryWithUnicodeName(node, entity, codePointHex);
+}
+
+async function enrichEntitySummaryWithUnicodeName(node, entity, codePointHex) {
+  const unicodeName = await lookupUnicodeNameByCodePoint(entity.codePoint);
+  if (!unicodeName) {
+    return;
+  }
+  if (node.dataset.entityRaw !== entity.raw) {
+    return;
+  }
+
+  node.textContent = `Entity: ${entity.raw} (${entity.description}; ${codePointHex} ${unicodeName}).`;
+}
+
+let entityDecodeNode = null;
+function extractCodePointFromEntity(raw) {
+  if (/^&#x/i.test(raw)) {
+    const cp = Number.parseInt(raw.slice(3, -1), 16);
+    return Number.isFinite(cp) ? cp : NaN;
+  }
+  if (/^&#/i.test(raw)) {
+    const cp = Number.parseInt(raw.slice(2, -1), 10);
+    return Number.isFinite(cp) ? cp : NaN;
+  }
+
+  if (!entityDecodeNode) {
+    entityDecodeNode = document.createElement('textarea');
+  }
+  entityDecodeNode.innerHTML = raw;
+  const decoded = entityDecodeNode.value;
+  if (!decoded || decoded === raw) {
+    return NaN;
+  }
+  const cp = decoded.codePointAt(0);
+  return Number.isFinite(cp) ? cp : NaN;
 }
 
 function updateIntentAssistantForEditor(key, store, editor, intentTarget) {

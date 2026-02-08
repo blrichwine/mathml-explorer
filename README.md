@@ -9,6 +9,7 @@ M7 is implemented:
 - Syntax-highlight preview for each editor
 - XML formatting actions (`Format A`, `Format B`)
 - Contextual help for valid child tags and attributes based on cursor location
+- Entity-aware context help (named/numeric entities with Unicode code point and UnicodeData name lookup)
 - Intent Assistant for applying/replacing `intent` on the current cursor tag using templates or custom values
 - Warning lists for parse errors, unknown tags, and unknown attributes
 - Simultaneous native MathML rendering (A/B)
