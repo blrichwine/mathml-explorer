@@ -152,6 +152,7 @@ function createEditorController(store, bus) {
   const modalClose = document.querySelector('#editor-modal-close');
   const modalFormat = document.querySelector('#editor-modal-format');
   const modalInput = document.querySelector('#editor-modal-input');
+  const modalHighlight = document.querySelector('#editor-modal-highlight');
   const modalTitle = document.querySelector('#editor-modal-title');
   const intentPreset = document.querySelector('#intent-assistant-preset');
   const intentInput = document.querySelector('#intent-assistant-input');
@@ -207,8 +208,8 @@ function createEditorController(store, bus) {
     applyFormattedMathML('B', store);
   });
 
-  expandAButton.addEventListener('click', () => openEditorModal('A', store, modalState, modalBackdrop, modalInput, modalTitle));
-  expandBButton.addEventListener('click', () => openEditorModal('B', store, modalState, modalBackdrop, modalInput, modalTitle));
+  expandAButton.addEventListener('click', () => openEditorModal('A', store, modalState, modalBackdrop, modalInput, modalHighlight, modalTitle));
+  expandBButton.addEventListener('click', () => openEditorModal('B', store, modalState, modalBackdrop, modalInput, modalHighlight, modalTitle));
 
   modalClose.addEventListener('click', () => closeEditorModal(modalState, modalBackdrop));
   modalFormat.addEventListener('click', () => {
@@ -248,6 +249,7 @@ function createEditorController(store, bus) {
     }
 
     const nextValue = modalInput.value;
+    modalHighlight.innerHTML = buildSyntaxHighlightedHtml(nextValue);
     store.setState((draft) => {
       draft.selectedExpression = modalState.activeKey;
       if (modalState.activeKey === 'A') {
@@ -256,6 +258,11 @@ function createEditorController(store, bus) {
         draft.mathmlB = nextValue;
       }
     });
+  });
+
+  modalInput.addEventListener('scroll', () => {
+    modalHighlight.scrollTop = modalInput.scrollTop;
+    modalHighlight.scrollLeft = modalInput.scrollLeft;
   });
 
   intentPreset.addEventListener('change', () => {
@@ -288,9 +295,11 @@ function createEditorController(store, bus) {
 
     if (modalState.activeKey === 'A' && modalInput.value !== state.mathmlA) {
       modalInput.value = state.mathmlA;
+      modalHighlight.innerHTML = buildSyntaxHighlightedHtml(state.mathmlA);
     }
     if (modalState.activeKey === 'B' && modalInput.value !== state.mathmlB) {
       modalInput.value = state.mathmlB;
+      modalHighlight.innerHTML = buildSyntaxHighlightedHtml(state.mathmlB);
     }
   });
 }
@@ -349,11 +358,16 @@ function clampPosition(value, max) {
   return Math.max(0, Math.min(max, value));
 }
 
-function openEditorModal(expressionKey, store, modalState, modalBackdrop, modalInput, modalTitle) {
+function openEditorModal(expressionKey, store, modalState, modalBackdrop, modalInput, modalHighlight, modalTitle) {
   modalState.activeKey = expressionKey;
   const state = store.getState();
   modalTitle.textContent = `Edit MathML ${expressionKey}`;
   modalInput.value = expressionKey === 'A' ? state.mathmlA : state.mathmlB;
+  modalHighlight.innerHTML = buildSyntaxHighlightedHtml(modalInput.value);
+  modalHighlight.scrollTop = 0;
+  modalHighlight.scrollLeft = 0;
+  modalInput.scrollTop = 0;
+  modalInput.scrollLeft = 0;
   modalBackdrop.classList.remove('hidden');
   modalBackdrop.setAttribute('aria-hidden', 'false');
   window.setTimeout(() => modalInput.focus(), 0);

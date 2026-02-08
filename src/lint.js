@@ -171,8 +171,40 @@ const ATTRIBUTE_VALUE_RULES = [
     tags: new Set(['mtable']),
     expected: 'space-separated values from "top", "bottom", "center", "baseline", "axis"',
     validate: (value) => isTokenList(value, new Set(['top', 'bottom', 'center', 'baseline', 'axis']))
+  },
+  {
+    attr: 'mathvariant',
+    tags: null,
+    expected:
+      '"normal", "bold", "italic", "bold-italic", "double-struck", "script", "fraktur", "sans-serif", "monospace", or another recognized MathML mathvariant token',
+    validate: (value) => KNOWN_MATHVARIANT_VALUES.has(value)
   }
 ];
+
+const COMMON_MATHVARIANT_VALUES = new Set([
+  'normal',
+  'bold',
+  'italic',
+  'bold-italic',
+  'double-struck',
+  'script',
+  'fraktur',
+  'sans-serif',
+  'monospace'
+]);
+
+const KNOWN_MATHVARIANT_VALUES = new Set([
+  ...COMMON_MATHVARIANT_VALUES,
+  'bold-fraktur',
+  'sans-serif-italic',
+  'sans-serif-bold-italic',
+  'bold-sans-serif',
+  'bold-script',
+  'initial',
+  'tailed',
+  'looped',
+  'stretched'
+]);
 
 function runLint(mathmlSource, options = {}) {
   const source = String(mathmlSource || '');
@@ -206,6 +238,7 @@ function runLint(mathmlSource, options = {}) {
     validateTag(findings, node, profile);
     validateAttributes(findings, node, { ignoreDataMjxAttributes });
     validateAttributeValues(findings, node);
+    validateMathvariantUsage(findings, node);
     validateChildren(findings, node);
     validateArity(findings, node);
     validateTokenContent(findings, node);
@@ -221,6 +254,40 @@ function runLint(mathmlSource, options = {}) {
     sourceLength: source.length,
     findings: dedupeFindings(findings)
   };
+}
+
+function validateMathvariantUsage(findings, node) {
+  const tag = normalize(node.tagName);
+  if (!node.hasAttribute('mathvariant')) {
+    return;
+  }
+
+  const rawValue = String(node.getAttribute('mathvariant') || '').trim();
+  const value = normalize(rawValue);
+
+  if (tag !== 'mi') {
+    findings.push(
+      makeFinding(
+        'warn',
+        'L022',
+        'mathvariant usage warning',
+        `Attribute "mathvariant" on <${tag}> is discouraged in modern MathML Core workflows; prefer direct Unicode character mapping when possible.`,
+        SPEC_LINKS.core
+      )
+    );
+  }
+
+  if (value && KNOWN_MATHVARIANT_VALUES.has(value) && !COMMON_MATHVARIANT_VALUES.has(value)) {
+    findings.push(
+      makeFinding(
+        'info',
+        'L023',
+        'Uncommon mathvariant value',
+        `mathvariant="${rawValue}" is recognized but uncommon. Common values include normal, bold, italic, bold-italic, double-struck, script, fraktur, sans-serif, and monospace.`,
+        SPEC_LINKS.presentation
+      )
+    );
+  }
 }
 
 function validateMathRootNamespace(findings, root) {
