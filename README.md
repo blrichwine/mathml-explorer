@@ -40,6 +40,8 @@ M7 is implemented:
   - target selector for insertion into MathML A or B
   - fresh MathJax conversion document per run (iframe sandbox)
   - package extraction from setup text (`packages: ...` and `\\require{...}`)
+- NIMAS import workflow (expanded folder / XML file) with MathML instance picker and optional linked image preview
+- EPUB import workflow (expanded folder / content file) with MathML instance picker and optional linked image preview
 
 ## Share URL Keys
 
@@ -55,6 +57,8 @@ M7 is implemented:
 
 - Linter architecture and rule IDs: `/Users/brian/dev/cdx/mathml-explorer/LINTER.md`
 - Browser/eTextbook compatibility map: `/Users/brian/dev/cdx/mathml-explorer/BROWSER_COMPATIBILITY.md`
+- NIMAS import details: `/Users/brian/dev/cdx/mathml-explorer/NIMAS_IMPORT.md`
+- EPUB import details: `/Users/brian/dev/cdx/mathml-explorer/EPUB_IMPORT.md`
 
 ## Runtime Notes
 

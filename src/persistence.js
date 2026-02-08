@@ -112,6 +112,11 @@ function mergeWithFallback(fallbackState, parsed) {
       ...(parsed.nimas || {}),
       instances: Array.isArray(parsed?.nimas?.instances) ? parsed.nimas.instances : fallbackState.nimas.instances
     },
+    epub: {
+      ...fallbackState.epub,
+      ...(parsed.epub || {}),
+      instances: Array.isArray(parsed?.epub?.instances) ? parsed.epub.instances : fallbackState.epub.instances
+    },
     meta: {
       ...fallbackState.meta,
       ...(parsed.meta || {})

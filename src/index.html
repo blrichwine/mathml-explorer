@@ -103,6 +103,37 @@
             </div>
           </details>
 
+          <details class="nimas-section latex-section panel" aria-label="EPUB Import">
+            <summary>EPUB Import</summary>
+            <div class="latex-content">
+              <div class="section-head">
+                <h2>EPUB Import</h2>
+                <div class="button-row">
+                  <button id="epub-load-folder-button" type="button" class="secondary-button">Load Folder</button>
+                  <button id="epub-load-file-button" type="button" class="secondary-button">Load File</button>
+                  <input id="epub-file-input" type="file" accept=".xhtml,.html,.xml,.opf,.epub,.zip,application/xhtml+xml,text/html,application/xml,text/xml,application/epub+zip,application/zip" hidden />
+                </div>
+              </div>
+              <p id="epub-status" class="small-note">No EPUB source loaded yet.</p>
+              <div class="nimas-controls">
+                <label>
+                  MathML Instance
+                  <select id="epub-instance-select" name="epub-instance-select"></select>
+                </label>
+                <label>
+                  Import Target
+                  <select id="epub-target-select" name="epub-target-select">
+                    <option value="A">MathML A</option>
+                    <option value="B">MathML B</option>
+                  </select>
+                </label>
+                <button id="epub-import-button" type="button">Import Selected MathML</button>
+              </div>
+              <p id="epub-instance-meta" class="small-note"></p>
+              <img id="epub-image-preview" class="nimas-image hidden" alt="EPUB linked image preview" />
+            </div>
+          </details>
+
           <div class="section-head">
             <h2>MathML Inputs</h2>
             <div class="button-row">

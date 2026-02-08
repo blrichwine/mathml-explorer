@@ -4,6 +4,7 @@ import { getIntentSuggestions } from './intent.js';
 import { diffOutputs } from './diff.js';
 import { convertLatexToMathML } from './latex.js';
 import { loadNimasFromDirectory, loadNimasFromFile } from './nimas.js';
+import { loadEpubFromDirectory, loadEpubFromFile } from './epub.js';
 import {
   exportStateToJson,
   hydrateState,
@@ -98,6 +99,14 @@ function createInitialState() {
       selectedIndex: -1,
       target: 'A'
     },
+    epub: {
+      sourceLabel: '',
+      status: 'No EPUB source loaded yet.',
+      statusLevel: 'idle',
+      instances: [],
+      selectedIndex: -1,
+      target: 'A'
+    },
     meta: {
       lastUpdated: new Date().toISOString()
     }
@@ -172,8 +181,16 @@ function wireControls(store) {
   const nimasTargetSelect = document.querySelector('#nimas-target-select');
   const nimasImportButton = document.querySelector('#nimas-import-button');
   const nimasImagePreview = document.querySelector('#nimas-image-preview');
+  const epubLoadFolderButton = document.querySelector('#epub-load-folder-button');
+  const epubLoadFileButton = document.querySelector('#epub-load-file-button');
+  const epubFileInput = document.querySelector('#epub-file-input');
+  const epubInstanceSelect = document.querySelector('#epub-instance-select');
+  const epubTargetSelect = document.querySelector('#epub-target-select');
+  const epubImportButton = document.querySelector('#epub-import-button');
+  const epubImagePreview = document.querySelector('#epub-image-preview');
   const nimasImageModalBackdrop = document.querySelector('#nimas-image-modal-backdrop');
   const nimasImageModalClose = document.querySelector('#nimas-image-modal-close');
+  const nimasImageModalTitle = document.querySelector('#nimas-image-modal-title');
   const nimasImageModalView = document.querySelector('#nimas-image-modal-view');
   const nimasImageZoomRange = document.querySelector('#nimas-image-zoom-range');
   const nimasImageZoomValue = document.querySelector('#nimas-image-zoom-value');
@@ -418,17 +435,139 @@ function wireControls(store) {
     });
   });
 
+  epubLoadFolderButton.addEventListener('click', async () => {
+    store.setState((draft) => {
+      draft.epub.status = 'Loading EPUB folder...';
+      draft.epub.statusLevel = 'loading';
+    });
+
+    try {
+      const loaded = await loadEpubFromDirectory();
+      store.setState((draft) => {
+        draft.epub.sourceLabel = loaded.sourceLabel;
+        draft.epub.status = `Loaded ${loaded.instances.length} MathML instance(s) from ${loaded.sourceLabel}.`;
+        draft.epub.statusLevel = loaded.instances.length ? 'ready' : 'warn';
+        draft.epub.instances = loaded.instances;
+        draft.epub.selectedIndex = loaded.instances.length ? 0 : -1;
+      });
+    } catch (error) {
+      store.setState((draft) => {
+        draft.epub.status = `EPUB folder load failed: ${error.message}`;
+        draft.epub.statusLevel = 'error';
+        draft.epub.instances = [];
+        draft.epub.selectedIndex = -1;
+      });
+    }
+  });
+
+  epubLoadFileButton.addEventListener('click', () => {
+    epubFileInput.click();
+  });
+
+  epubFileInput.addEventListener('change', async () => {
+    const file = epubFileInput.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    store.setState((draft) => {
+      draft.epub.status = `Loading ${file.name}...`;
+      draft.epub.statusLevel = 'loading';
+    });
+    try {
+      const loaded = await loadEpubFromFile(file);
+      store.setState((draft) => {
+        draft.epub.sourceLabel = loaded.sourceLabel;
+        draft.epub.status = `Loaded ${loaded.instances.length} MathML instance(s) from ${loaded.sourceLabel}.`;
+        draft.epub.statusLevel = loaded.instances.length ? 'ready' : 'warn';
+        draft.epub.instances = loaded.instances;
+        draft.epub.selectedIndex = loaded.instances.length ? 0 : -1;
+      });
+    } catch (error) {
+      store.setState((draft) => {
+        draft.epub.status = `EPUB load failed: ${error.message}`;
+        draft.epub.statusLevel = 'error';
+        draft.epub.instances = [];
+        draft.epub.selectedIndex = -1;
+      });
+    } finally {
+      epubFileInput.value = '';
+    }
+  });
+
+  epubInstanceSelect.addEventListener('change', () => {
+    store.setState((draft) => {
+      draft.epub.selectedIndex = Number(epubInstanceSelect.value);
+    });
+  });
+
+  epubTargetSelect.addEventListener('change', () => {
+    store.setState((draft) => {
+      draft.epub.target = epubTargetSelect.value;
+    });
+  });
+
+  epubImportButton.addEventListener('click', () => {
+    const state = store.getState();
+    const index = state.epub.selectedIndex;
+    let selected = null;
+    if (index >= 0) {
+      selected = state.epub.instances.find((entry) => entry.index === index) || null;
+    }
+    if (!selected) {
+      selected = state.epub.instances[0] || null;
+    }
+
+    if (!selected) {
+      store.setState((draft) => {
+        draft.epub.status = 'No MathML instance selected.';
+        draft.epub.statusLevel = 'warn';
+      });
+      return;
+    }
+
+    store.setState((draft) => {
+      if (draft.epub.target === 'B') {
+        draft.mathmlB = selected.mathml;
+        draft.selectedExpression = 'B';
+      } else {
+        draft.mathmlA = selected.mathml;
+        draft.selectedExpression = 'A';
+      }
+      draft.epub.status = `Imported ${selected.id} into MathML ${draft.epub.target}.`;
+      draft.epub.statusLevel = 'ready';
+    });
+  });
+
   nimasImagePreview.addEventListener('click', () => {
     if (!nimasImagePreview.src || nimasImagePreview.classList.contains('hidden')) {
       return;
     }
     openNimasImageModal(
       nimasImageModalBackdrop,
+      nimasImageModalTitle,
       nimasImageModalView,
       nimasImageZoomRange,
       nimasImageZoomValue,
       nimasImagePreview.src,
-      nimasImagePreview.alt
+      nimasImagePreview.alt,
+      'NIMAS Linked Image'
+    );
+  });
+
+  epubImagePreview.addEventListener('click', () => {
+    if (!epubImagePreview.src || epubImagePreview.classList.contains('hidden')) {
+      return;
+    }
+    openNimasImageModal(
+      nimasImageModalBackdrop,
+      nimasImageModalTitle,
+      nimasImageModalView,
+      nimasImageZoomRange,
+      nimasImageZoomValue,
+      epubImagePreview.src,
+      epubImagePreview.alt,
+      'EPUB Linked Image'
     );
   });
 
@@ -474,6 +613,7 @@ function wireControls(store) {
   latexInput.value = current.latexInput;
   latexTargetSelect.value = current.latexTarget || 'A';
   nimasTargetSelect.value = current.nimas?.target || 'A';
+  epubTargetSelect.value = current.epub?.target || 'A';
 }
 
 function syncControlValues(state) {
@@ -486,6 +626,7 @@ function syncControlValues(state) {
   const latexInput = document.querySelector('#latex-input');
   const latexTargetSelect = document.querySelector('#latex-target-select');
   const nimasTargetSelect = document.querySelector('#nimas-target-select');
+  const epubTargetSelect = document.querySelector('#epub-target-select');
 
   if (versionSelect.value !== state.mathjax.versionId) {
     versionSelect.value = state.mathjax.versionId;
@@ -513,6 +654,9 @@ function syncControlValues(state) {
   }
   if (nimasTargetSelect.value !== (state.nimas?.target || 'A')) {
     nimasTargetSelect.value = state.nimas?.target || 'A';
+  }
+  if (epubTargetSelect.value !== (state.epub?.target || 'A')) {
+    epubTargetSelect.value = state.epub?.target || 'A';
   }
 }
 
@@ -595,9 +739,66 @@ function renderNimasPanel(state) {
   }
 }
 
-function openNimasImageModal(backdrop, imageNode, zoomRange, zoomValue, src, alt) {
+function setEpubStatus(message, state = 'idle') {
+  const node = document.querySelector('#epub-status');
+  if (!node) {
+    return;
+  }
+  node.textContent = message;
+  node.className = `small-note status-${state}`;
+}
+
+function renderEpubPanel(state) {
+  const select = document.querySelector('#epub-instance-select');
+  const meta = document.querySelector('#epub-instance-meta');
+  const preview = document.querySelector('#epub-image-preview');
+  const instances = state.epub?.instances || [];
+  setEpubStatus(state.epub?.status || 'No EPUB source loaded yet.', state.epub?.statusLevel || 'idle');
+
+  const currentValue = select.value;
+  select.innerHTML = '';
+  for (const instance of instances) {
+    const option = document.createElement('option');
+    option.value = String(instance.index);
+    option.textContent = `${instance.id}${instance.sourcePath ? ` [${truncate(instance.sourcePath, 42)}]` : ''}`;
+    select.append(option);
+  }
+
+  const selectedIndex = state.epub?.selectedIndex ?? -1;
+  if (instances.length === 0) {
+    meta.textContent = 'No MathML instances loaded.';
+    preview.classList.add('hidden');
+    preview.removeAttribute('src');
+    preview.removeAttribute('title');
+    return;
+  }
+
+  const selected = instances.find((entry) => entry.index === selectedIndex) || instances[0];
+  if (currentValue !== String(selected.index)) {
+    select.value = String(selected.index);
+  }
+
+  const sourceText = selected.sourcePath ? ` source: ${selected.sourcePath}` : '';
+  const altText = selected.alttext ? ` alttext: ${selected.alttext}` : '';
+  const altImg = selected.altimg ? ` altimg: ${selected.altimg}` : '';
+  meta.textContent = `Selected ${selected.id}.${sourceText}${altImg}${altText}`;
+
+  if (selected.imageUrl) {
+    preview.src = selected.imageUrl;
+    preview.alt = selected.alttext || `Image for ${selected.id}`;
+    preview.title = 'Click to open full-size image';
+    preview.classList.remove('hidden');
+  } else {
+    preview.classList.add('hidden');
+    preview.removeAttribute('src');
+    preview.removeAttribute('title');
+  }
+}
+
+function openNimasImageModal(backdrop, titleNode, imageNode, zoomRange, zoomValue, src, alt, title) {
   zoomRange.value = '100';
   zoomValue.textContent = '100%';
+  titleNode.textContent = title || 'Linked Image';
   imageNode.dataset.naturalWidth = '';
   imageNode.style.width = '';
   imageNode.src = src;
@@ -650,6 +851,12 @@ function renderStatus(state) {
       status: state.nimas?.status || '',
       instances: state.nimas?.instances?.length || 0,
       selectedIndex: state.nimas?.selectedIndex ?? -1
+    },
+    epub: {
+      sourceLabel: state.epub?.sourceLabel || '',
+      status: state.epub?.status || '',
+      instances: state.epub?.instances?.length || 0,
+      selectedIndex: state.epub?.selectedIndex ?? -1
     },
     lengths: {
       mathmlA: state.mathmlA.length,
@@ -1067,6 +1274,7 @@ function wireStateSideEffects(store, bus) {
     renderAnalysisPanels(state);
     renderOutputDiff(state);
     renderNimasPanel(state);
+    renderEpubPanel(state);
     renderScheduler.schedule();
   });
 }
@@ -1092,6 +1300,7 @@ function bootstrap() {
   renderAnalysisPanels(store.getState());
   renderOutputDiff(store.getState());
   renderNimasPanel(store.getState());
+  renderEpubPanel(store.getState());
   renderLatexPreview('');
   setPersistenceStatus(queryHydrated.message || 'Ready.', queryHydrated.level || 'idle');
   setLatexStatus('LaTeX conversion idle.', 'idle');
