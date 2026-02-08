@@ -444,8 +444,10 @@ function applyFormattedMathML(expressionKey, store) {
 }
 
 function formatMathML(source) {
+  const entityTokens = new Map();
+  const protectedSource = protectEntityReferences(source, entityTokens);
   const parser = new DOMParser();
-  const xmlDoc = parser.parseFromString(source, 'application/xml');
+  const xmlDoc = parser.parseFromString(protectedSource, 'application/xml');
   const parseError = xmlDoc.querySelector('parsererror');
 
   if (parseError) {
@@ -455,7 +457,26 @@ function formatMathML(source) {
   const root = xmlDoc.documentElement;
   const lines = [];
   serializeNode(root, 0, lines);
-  return { value: lines.join('\n') };
+  const formatted = lines.join('\n');
+  return { value: restoreEntityReferences(formatted, entityTokens) };
+}
+
+function protectEntityReferences(source, entityTokens) {
+  let index = 0;
+  return String(source || '').replace(/&(?:#x[0-9a-fA-F]+|#[0-9]+|[A-Za-z][\w.-]*);/g, (rawEntity) => {
+    const token = `__MLW_ENTITY_${index}__`;
+    entityTokens.set(token, rawEntity);
+    index += 1;
+    return token;
+  });
+}
+
+function restoreEntityReferences(source, entityTokens) {
+  let output = String(source || '');
+  for (const [token, rawEntity] of entityTokens.entries()) {
+    output = output.split(token).join(rawEntity);
+  }
+  return output;
 }
 
 function serializeNode(node, depth, lines) {
