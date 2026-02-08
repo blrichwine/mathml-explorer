@@ -29,6 +29,10 @@
               <option value="strict-core">Strict core</option>
             </select>
           </label>
+          <label>
+            <input id="ignore-data-mjx-toggle" type="checkbox" />
+            Ignore data-mjx*
+          </label>
           <button id="share-url-button" type="button">Copy Share URL</button>
           <button id="save-json-button" type="button">Save JSON</button>
           <button id="load-json-button" type="button">Load JSON</button>
@@ -187,6 +191,85 @@
                 <ul id="context-attributes-list" class="help-list"></ul>
               </section>
             </div>
+
+            <section class="intent-assistant" aria-label="Intent Assistant">
+              <h3>Intent Assistant</h3>
+              <p id="intent-assistant-target" class="small-note">Select a tag in MathML A or B to target intent insertion.</p>
+              <div class="intent-assistant-controls">
+                <label>
+                  Template
+                  <select id="intent-assistant-preset" name="intent-assistant-preset">
+                    <option value="">Select template...</option>
+                    <optgroup label="Common Templates">
+                      <option value="grouped-expression">Grouped expression</option>
+                      <option value="function($f, $x)">Function</option>
+                      <option value="fraction($num, $den)">Fraction</option>
+                      <option value="power($base, $exp)">Power</option>
+                      <option value="subscript($base, $sub)">Subscript</option>
+                      <option value="limit($base, $under, $over)">Limit</option>
+                      <option value="operator">Operator</option>
+                    </optgroup>
+                    <optgroup label="Core Properties: Fixity">
+                      <option value="f:function($x,$y)">function</option>
+                      <option value="f:prefix($x,$y)">prefix</option>
+                      <option value="f:postfix($x)">postfix</option>
+                      <option value="f:infix($x,$y)">infix</option>
+                      <option value="f:silent($x,$y)">silent</option>
+                    </optgroup>
+                    <optgroup label="Core Properties: Inference">
+                      <option value=":literal">literal</option>
+                      <option value=":common">common</option>
+                      <option value=":legacy">legacy</option>
+                    </optgroup>
+                    <optgroup label="Core Properties: Table">
+                      <option value=":array">array</option>
+                      <option value=":array:by-column">array + by-column</option>
+                      <option value=":matrix">matrix</option>
+                      <option value=":piecewise">piecewise</option>
+                      <option value=":system-of-equations">system-of-equations</option>
+                      <option value=":lines">lines</option>
+                      <option value=":continued-row">continued-row</option>
+                      <option value=":by-row">by-row</option>
+                      <option value=":by-column">by-column</option>
+                      <option value=":equation-label">equation-label</option>
+                      <option value=":no-equation-label">no-equation-label</option>
+                    </optgroup>
+                    <optgroup label="Core Properties: Math Category">
+                      <option value=":number-set">number-set</option>
+                      <option value=":largeop">largeop</option>
+                      <option value="sum:largeop($from,$to,$arg)">largeop (sum template)</option>
+                    </optgroup>
+                    <optgroup label="Core Properties: Units/Time/Number/Geometry">
+                      <option value=":unit">unit</option>
+                      <option value=":currency">currency</option>
+                      <option value=":date">date</option>
+                      <option value=":time">time</option>
+                      <option value=":roman-numeral">roman-numeral</option>
+                      <option value=":shape">shape</option>
+                    </optgroup>
+                    <optgroup label="Core Properties: Chemistry">
+                      <option value=":chemical-element">chemical-element</option>
+                      <option value=":chemical-formula">chemical-formula</option>
+                      <option value=":chemical-equation">chemical-equation</option>
+                    </optgroup>
+                    <optgroup label="Core Properties: Pause/Argname">
+                      <option value=":pause-short">pause-short</option>
+                      <option value=":pause-medium">pause-medium</option>
+                      <option value=":pause-long">pause-long</option>
+                      <option value=":pause-xlong">pause-xlong</option>
+                      <option value=":use-argname">use-argname</option>
+                    </optgroup>
+                  </select>
+                </label>
+                <label>
+                  Intent Value
+                  <input id="intent-assistant-input" type="text" spellcheck="false" placeholder="e.g., function($f, $x)" />
+                </label>
+                <button id="intent-assistant-apply" type="button">Apply to Current Tag</button>
+              </div>
+              <p class="small-note">Core property reference: <a href="https://w3c.github.io/mathml-docs/intent-core-properties/" target="_blank" rel="noreferrer noopener">W3C Intent Core Properties</a></p>
+              <p id="intent-assistant-status" class="small-note status-idle">Ready to apply intent.</p>
+            </section>
 
             <section class="analysis-section" aria-label="Lint and Intent Analysis">
               <h3>Lint Findings</h3>

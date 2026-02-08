@@ -82,6 +82,7 @@ function createInitialState() {
       B: []
     },
     lintProfile: 'authoring-guidance',
+    ignoreDataMjxAttributes: true,
     intentSuggestions: {
       A: [],
       B: []
@@ -164,6 +165,7 @@ function wireControls(store) {
   const versionSelect = document.querySelector('#mathjax-version-select');
   const modeSelect = document.querySelector('#mathjax-output-mode-select');
   const lintProfileSelect = document.querySelector('#lint-profile-select');
+  const ignoreDataMjxToggle = document.querySelector('#ignore-data-mjx-toggle');
   const diffChannelSelect = document.querySelector('#diff-channel-select');
   const diffViewSelect = document.querySelector('#diff-view-select');
   const shareButton = document.querySelector('#share-url-button');
@@ -213,6 +215,12 @@ function wireControls(store) {
   lintProfileSelect.addEventListener('change', () => {
     store.setState((draft) => {
       draft.lintProfile = lintProfileSelect.value;
+    });
+  });
+
+  ignoreDataMjxToggle.addEventListener('change', () => {
+    store.setState((draft) => {
+      draft.ignoreDataMjxAttributes = Boolean(ignoreDataMjxToggle.checked);
     });
   });
 
@@ -601,6 +609,7 @@ function wireControls(store) {
   versionSelect.value = current.mathjax.versionId;
   modeSelect.value = current.mathjax.outputMode;
   lintProfileSelect.value = current.lintProfile || 'authoring-guidance';
+  ignoreDataMjxToggle.checked = Boolean(current.ignoreDataMjxAttributes);
   diffChannelSelect.value = current.diff.channelId;
   if (!diffChannelSelect.value && diffChannelSelect.options.length > 0) {
     diffChannelSelect.value = diffChannelSelect.options[0].value;
@@ -620,6 +629,7 @@ function syncControlValues(state) {
   const versionSelect = document.querySelector('#mathjax-version-select');
   const modeSelect = document.querySelector('#mathjax-output-mode-select');
   const lintProfileSelect = document.querySelector('#lint-profile-select');
+  const ignoreDataMjxToggle = document.querySelector('#ignore-data-mjx-toggle');
   const diffChannelSelect = document.querySelector('#diff-channel-select');
   const diffViewSelect = document.querySelector('#diff-view-select');
   const latexSetupInput = document.querySelector('#latex-setup-input');
@@ -636,6 +646,9 @@ function syncControlValues(state) {
   }
   if (lintProfileSelect.value !== (state.lintProfile || 'authoring-guidance')) {
     lintProfileSelect.value = state.lintProfile || 'authoring-guidance';
+  }
+  if (ignoreDataMjxToggle.checked !== Boolean(state.ignoreDataMjxAttributes)) {
+    ignoreDataMjxToggle.checked = Boolean(state.ignoreDataMjxAttributes);
   }
   if (diffChannelSelect.value !== state.diff.channelId) {
     diffChannelSelect.value = state.diff.channelId;
@@ -846,6 +859,7 @@ function renderStatus(state) {
     schemaVersion: state.schemaVersion,
     mathjax: state.mathjax,
     lintProfile: state.lintProfile,
+    ignoreDataMjxAttributes: Boolean(state.ignoreDataMjxAttributes),
     nimas: {
       sourceLabel: state.nimas?.sourceLabel || '',
       status: state.nimas?.status || '',
@@ -947,7 +961,9 @@ function renderOutputDiff(state) {
     return;
   }
 
-  const result = diffOutputs(channelState.A, channelState.B);
+  const result = diffOutputs(channelState.A, channelState.B, {
+    granularity: channel === 'mathcatBraille' ? 'char' : 'word'
+  });
   summary.textContent = result.equal
     ? 'No A/B differences for selected channel.'
     : `A/B differences detected for channel ${channel}.`;
@@ -1244,10 +1260,14 @@ function wireStateSideEffects(store, bus) {
   let lastAnalysisSignature = '';
 
   bus.on('state:changed', (state) => {
-    const signature = `${state.lintProfile}\u0000${state.mathmlA}\u0000${state.mathmlB}`;
+    const signature = `${state.lintProfile}\u0000${state.ignoreDataMjxAttributes ? '1' : '0'}\u0000${state.mathmlA}\u0000${state.mathmlB}`;
     if (signature !== lastAnalysisSignature) {
-      const lintA = runLint(state.mathmlA, { profile: state.lintProfile }).findings;
-      const lintB = runLint(state.mathmlB, { profile: state.lintProfile }).findings;
+      const lintOptions = {
+        profile: state.lintProfile,
+        ignoreDataMjxAttributes: Boolean(state.ignoreDataMjxAttributes)
+      };
+      const lintA = runLint(state.mathmlA, lintOptions).findings;
+      const lintB = runLint(state.mathmlB, lintOptions).findings;
       const intentA = getIntentSuggestions(state.mathmlA).suggestions;
       const intentB = getIntentSuggestions(state.mathmlB).suggestions;
       lastAnalysisSignature = signature;
@@ -1290,7 +1310,10 @@ function bootstrap() {
   wireControls(store);
   wireStateSideEffects(store, bus);
 
-  runLint(store.getState().mathmlA);
+  runLint(store.getState().mathmlA, {
+    profile: store.getState().lintProfile,
+    ignoreDataMjxAttributes: Boolean(store.getState().ignoreDataMjxAttributes)
+  });
   getIntentSuggestions(store.getState().mathmlA);
   diffOutputs('', '');
 

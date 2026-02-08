@@ -25,11 +25,11 @@ const GLOBAL_ATTRIBUTES = [
 
 const MATHML_REFERENCE = {
   math: {
-    children: ['mrow', 'mi', 'mn', 'mo', 'mfrac', 'msup', 'msub', 'msubsup', 'msqrt', 'mroot', 'mfenced', 'mtable', 'semantics'],
+    children: ['mrow', 'mi', 'mn', 'mo', 'mfrac', 'msup', 'msub', 'msubsup', 'mmultiscripts', 'mover', 'munder', 'munderover', 'msqrt', 'mroot', 'mfenced', 'mtable', 'semantics'],
     attributes: ['xmlns', 'display', 'intent', 'altimg', 'alttext', 'altimg-width', 'altimg-height', 'altimg-valign']
   },
   mrow: {
-    children: ['mi', 'mn', 'mo', 'mtext', 'mspace', 'mfrac', 'msup', 'msub', 'msubsup', 'msqrt', 'mroot', 'mfenced', 'mtable'],
+    children: ['mi', 'mn', 'mo', 'mtext', 'mspace', 'mfrac', 'msup', 'msub', 'msubsup', 'mmultiscripts', 'mover', 'munder', 'munderover', 'msqrt', 'mroot', 'mfenced', 'mtable'],
     attributes: ['intent']
   },
   mi: {
@@ -68,8 +68,32 @@ const MATHML_REFERENCE = {
     children: ['base', 'subscript', 'superscript'],
     attributes: ['intent']
   },
+  mmultiscripts: {
+    children: ['base', 'post-subscript', 'post-superscript', 'mprescripts', 'pre-subscript', 'pre-superscript', 'none'],
+    attributes: ['intent']
+  },
+  mprescripts: {
+    children: [],
+    attributes: []
+  },
+  none: {
+    children: [],
+    attributes: []
+  },
+  mover: {
+    children: ['base', 'overscript'],
+    attributes: ['accent', 'intent']
+  },
+  munder: {
+    children: ['base', 'underscript'],
+    attributes: ['accentunder', 'intent']
+  },
+  munderover: {
+    children: ['base', 'underscript', 'overscript'],
+    attributes: ['accent', 'accentunder', 'intent']
+  },
   msqrt: {
-    children: ['mrow', 'mi', 'mn', 'mo', 'mfrac', 'msup', 'msub', 'msubsup'],
+    children: ['mrow', 'mi', 'mn', 'mo', 'mfrac', 'msup', 'msub', 'msubsup', 'mmultiscripts', 'mover', 'munder', 'munderover'],
     attributes: ['intent']
   },
   mroot: {
@@ -77,7 +101,7 @@ const MATHML_REFERENCE = {
     attributes: ['intent']
   },
   mfenced: {
-    children: ['mrow', 'mi', 'mn', 'mo', 'mfrac', 'msup', 'msub', 'msubsup'],
+    children: ['mrow', 'mi', 'mn', 'mo', 'mfrac', 'msup', 'msub', 'msubsup', 'mmultiscripts', 'mover', 'munder', 'munderover'],
     attributes: ['open', 'close', 'separators', 'intent']
   },
   mtable: {
@@ -93,7 +117,7 @@ const MATHML_REFERENCE = {
     attributes: ['intent']
   },
   mtd: {
-    children: ['mrow', 'mi', 'mn', 'mo', 'mfrac', 'msup', 'msub', 'msubsup'],
+    children: ['mrow', 'mi', 'mn', 'mo', 'mfrac', 'msup', 'msub', 'msubsup', 'mmultiscripts', 'mover', 'munder', 'munderover'],
     attributes: ['rowspan', 'columnspan', 'intent']
   },
   semantics: {
@@ -129,6 +153,11 @@ function createEditorController(store, bus) {
   const modalFormat = document.querySelector('#editor-modal-format');
   const modalInput = document.querySelector('#editor-modal-input');
   const modalTitle = document.querySelector('#editor-modal-title');
+  const intentPreset = document.querySelector('#intent-assistant-preset');
+  const intentInput = document.querySelector('#intent-assistant-input');
+  const intentApplyButton = document.querySelector('#intent-assistant-apply');
+  const intentTarget = document.querySelector('#intent-assistant-target');
+  const intentStatus = document.querySelector('#intent-assistant-status');
 
   initializeInputs(store, aInput, bInput);
   const modalState = { activeKey: '' };
@@ -152,14 +181,21 @@ function createEditorController(store, bus) {
       });
     });
 
-    editor.input.addEventListener('click', () => updateContextForEditor(key, store, editor, contextSummary, childList, attrList));
-    editor.input.addEventListener('keyup', () => updateContextForEditor(key, store, editor, contextSummary, childList, attrList));
+    editor.input.addEventListener('click', () => {
+      updateContextForEditor(key, store, editor, contextSummary, childList, attrList);
+      updateIntentAssistantForEditor(key, store, editor, intentTarget);
+    });
+    editor.input.addEventListener('keyup', () => {
+      updateContextForEditor(key, store, editor, contextSummary, childList, attrList);
+      updateIntentAssistantForEditor(key, store, editor, intentTarget);
+    });
     editor.input.addEventListener('scroll', () => syncHighlightScroll(editor));
     editor.input.addEventListener('focus', () => {
       store.setState((draft) => {
         draft.selectedExpression = key;
       });
       updateContextForEditor(key, store, editor, contextSummary, childList, attrList);
+      updateIntentAssistantForEditor(key, store, editor, intentTarget);
     });
   }
 
@@ -222,14 +258,33 @@ function createEditorController(store, bus) {
     });
   });
 
+  intentPreset.addEventListener('change', () => {
+    if (intentPreset.value) {
+      intentInput.value = intentPreset.value;
+    }
+  });
+
+  intentApplyButton.addEventListener('click', () => {
+    const state = store.getState();
+    const key = state.selectedExpression === 'B' ? 'B' : 'A';
+    const editor = editorMap[key];
+    const result = applyIntentToCurrentTag(key, store, editor, intentInput.value);
+    setIntentAssistantStatus(intentStatus, result.message, result.ok ? 'ready' : 'warn');
+    updateIntentAssistantForEditor(key, store, editor, intentTarget);
+  });
+
   bus.on('state:changed', (state) => {
     syncEditor('A', state.mathmlA, editorMap.A);
     syncEditor('B', state.mathmlB, editorMap.B);
-    renderWarnings(aWarnings, collectWarnings(state.mathmlA));
-    renderWarnings(bWarnings, collectWarnings(state.mathmlB));
+    const warningOptions = {
+      ignoreDataMjxAttributes: Boolean(state.ignoreDataMjxAttributes)
+    };
+    renderWarnings(aWarnings, collectWarnings(state.mathmlA, warningOptions));
+    renderWarnings(bWarnings, collectWarnings(state.mathmlB, warningOptions));
 
     const activeKey = state.selectedExpression === 'B' ? 'B' : 'A';
     updateContextForEditor(activeKey, store, editorMap[activeKey], contextSummary, childList, attrList);
+    updateIntentAssistantForEditor(activeKey, store, editorMap[activeKey], intentTarget);
 
     if (modalState.activeKey === 'A' && modalInput.value !== state.mathmlA) {
       modalInput.value = state.mathmlA;
@@ -238,6 +293,60 @@ function createEditorController(store, bus) {
       modalInput.value = state.mathmlB;
     }
   });
+}
+
+function applyIntentToCurrentTag(expressionKey, store, editor, intentValue) {
+  const rawIntent = String(intentValue || '').trim();
+  if (!rawIntent) {
+    return { ok: false, message: 'Intent value is empty.' };
+  }
+
+  const source = expressionKey === 'A' ? store.getState().mathmlA : store.getState().mathmlB;
+  const cursor = editor.input.selectionStart || 0;
+  const context = findCurrentTagContextAtCursor(source, cursor);
+  if (!context) {
+    return { ok: false, message: `Cursor is not inside a tag in Expression ${expressionKey}.` };
+  }
+
+  const escapedIntent = escapeAttribute(rawIntent);
+  const updatedOpenTag = upsertIntentAttribute(context.openTagRaw, escapedIntent);
+  if (updatedOpenTag === context.openTagRaw) {
+    return { ok: false, message: `Could not update intent on <${context.tag}>.` };
+  }
+
+  const nextSource = `${source.slice(0, context.openTagStart)}${updatedOpenTag}${source.slice(context.openTagEnd)}`;
+  const cursorDelta = updatedOpenTag.length - context.openTagRaw.length;
+  const nextCursor = clampPosition(cursor + cursorDelta, nextSource.length);
+
+  store.setState((draft) => {
+    draft.selectedExpression = expressionKey;
+    if (expressionKey === 'A') {
+      draft.mathmlA = nextSource;
+    } else {
+      draft.mathmlB = nextSource;
+    }
+  });
+
+  window.requestAnimationFrame(() => {
+    editor.input.focus();
+    editor.input.setSelectionRange(nextCursor, nextCursor);
+  });
+
+  return { ok: true, message: `Applied intent to <${context.tag}> in Expression ${expressionKey}.` };
+}
+
+function upsertIntentAttribute(openTagRaw, escapedIntent) {
+  const withReplacement = openTagRaw.replace(/(\sintent\s*=\s*)(["'])([\s\S]*?)\2/i, (_match, prefix, _quote) => {
+    return `${prefix}"${escapedIntent}"`;
+  });
+  if (withReplacement !== openTagRaw) {
+    return withReplacement;
+  }
+  return openTagRaw.replace(/\s*\/?>$/, (suffix) => ` intent="${escapedIntent}"${suffix}`);
+}
+
+function clampPosition(value, max) {
+  return Math.max(0, Math.min(max, value));
 }
 
 function openEditorModal(expressionKey, store, modalState, modalBackdrop, modalInput, modalTitle) {
@@ -386,8 +495,9 @@ function buildSyntaxHighlightedHtml(source) {
   });
 }
 
-function collectWarnings(source) {
+function collectWarnings(source, options = {}) {
   const warnings = [];
+  const ignoreDataMjxAttributes = options.ignoreDataMjxAttributes !== false;
 
   if (!source.trim()) {
     return [{ type: 'info', message: 'Editor is empty.' }];
@@ -423,6 +533,9 @@ function collectWarnings(source) {
     const allowed = new Set([...(MATHML_REFERENCE[rawTag]?.attributes || []), ...GLOBAL_ATTRIBUTES]);
 
     for (const attr of attributes) {
+      if (ignoreDataMjxAttributes && /^data-mjx/i.test(attr)) {
+        continue;
+      }
       if (!allowed.has(attr)) {
         warnings.push({ type: 'warn', message: `Unknown attribute "${attr}" on <${rawTag}>.` });
       }
@@ -492,6 +605,28 @@ function updateContextForEditor(key, store, editor, contextSummary, childList, a
   }
 }
 
+function updateIntentAssistantForEditor(key, store, editor, intentTarget) {
+  const source = key === 'A' ? store.getState().mathmlA : store.getState().mathmlB;
+  const cursor = editor.input.selectionStart || 0;
+  const context = findCurrentTagContextAtCursor(source, cursor);
+  if (!context) {
+    intentTarget.textContent = `Expression ${key}: cursor is not inside a recognized tag.`;
+    return;
+  }
+
+  const existingIntent = extractIntentAttribute(context.openTagRaw);
+  if (existingIntent) {
+    intentTarget.textContent = `Expression ${key}: targeting <${context.tag}>. Existing intent="${existingIntent}".`;
+  } else {
+    intentTarget.textContent = `Expression ${key}: targeting <${context.tag}>. No existing intent attribute found.`;
+  }
+}
+
+function setIntentAssistantStatus(node, message, state = 'idle') {
+  node.textContent = message;
+  node.className = `small-note status-${state}`;
+}
+
 function appendListItem(list, text) {
   const li = document.createElement('li');
   li.textContent = text;
@@ -522,6 +657,44 @@ function findCurrentTagAtCursor(source, cursor) {
   }
 
   return stack.length ? stack[stack.length - 1] : '';
+}
+
+function findCurrentTagContextAtCursor(source, cursor) {
+  const stack = [];
+  const beforeCursor = source.slice(0, cursor);
+  const tagRegex = /<\s*(\/)?\s*([a-zA-Z][\w:-]*)([^>]*)>/g;
+
+  for (const match of beforeCursor.matchAll(tagRegex)) {
+    const isClosing = Boolean(match[1]);
+    const tag = normalizeTag(match[2]);
+    const raw = match[0];
+    const selfClosing = /\/\s*>$/.test(raw);
+    const start = match.index || 0;
+    const end = start + raw.length;
+
+    if (isClosing) {
+      while (stack.length && stack[stack.length - 1].tag !== tag) {
+        stack.pop();
+      }
+      if (stack.length && stack[stack.length - 1].tag === tag) {
+        stack.pop();
+      }
+    } else if (!selfClosing) {
+      stack.push({
+        tag,
+        openTagRaw: raw,
+        openTagStart: start,
+        openTagEnd: end
+      });
+    }
+  }
+
+  return stack.length ? stack[stack.length - 1] : null;
+}
+
+function extractIntentAttribute(openTagRaw) {
+  const match = openTagRaw.match(/\sintent\s*=\s*(["'])([\s\S]*?)\1/i);
+  return match ? match[2] : '';
 }
 
 function normalizeTag(tagName) {

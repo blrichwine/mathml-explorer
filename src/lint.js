@@ -35,6 +35,12 @@ const ELEMENT_COMPAT = {
   msup: { tier: 'core', note: 'Core script element.' },
   msub: { tier: 'core', note: 'Core script element.' },
   msubsup: { tier: 'core', note: 'Core script element.' },
+  mmultiscripts: { tier: 'core', note: 'Core script element.' },
+  mprescripts: { tier: 'core', note: 'Core script marker element.' },
+  none: { tier: 'core', note: 'Core script placeholder element.' },
+  mover: { tier: 'core', note: 'Core script element.' },
+  munder: { tier: 'core', note: 'Core script element.' },
+  munderover: { tier: 'core', note: 'Core script element.' },
   msqrt: { tier: 'core', note: 'Core radical element.' },
   mroot: { tier: 'core', note: 'Core radical element.' },
   mtable: { tier: 'core', note: 'Core table structure.' },
@@ -63,7 +69,7 @@ const ATTRIBUTE_COMPAT = {
   scriptsizemultiplier: { tier: 'at-risk', note: 'Legacy styling control with uneven support.' }
 };
 
-const CHILDREN_PRESENTATION = ['mrow', 'mi', 'mn', 'mo', 'mtext', 'mspace', 'mfrac', 'msup', 'msub', 'msubsup', 'msqrt', 'mroot', 'mtable', 'semantics'];
+const CHILDREN_PRESENTATION = ['mrow', 'mi', 'mn', 'mo', 'mtext', 'mspace', 'mfrac', 'msup', 'msub', 'msubsup', 'mmultiscripts', 'mover', 'munder', 'munderover', 'msqrt', 'mroot', 'mtable', 'semantics'];
 
 const TAG_RULES = {
   math: {
@@ -80,6 +86,12 @@ const TAG_RULES = {
   msup: { children: [...CHILDREN_PRESENTATION], attributes: ['intent'], arity: { exact: 2 } },
   msub: { children: [...CHILDREN_PRESENTATION], attributes: ['intent'], arity: { exact: 2 } },
   msubsup: { children: [...CHILDREN_PRESENTATION], attributes: ['intent'], arity: { exact: 3 } },
+  mmultiscripts: { children: [...CHILDREN_PRESENTATION, 'mprescripts', 'none'], attributes: ['intent'], arity: { min: 3 } },
+  mprescripts: { children: [], attributes: [] },
+  none: { children: [], attributes: [] },
+  mover: { children: [...CHILDREN_PRESENTATION], attributes: ['accent', 'intent'], arity: { exact: 2 } },
+  munder: { children: [...CHILDREN_PRESENTATION], attributes: ['accentunder', 'intent'], arity: { exact: 2 } },
+  munderover: { children: [...CHILDREN_PRESENTATION], attributes: ['accent', 'accentunder', 'intent'], arity: { exact: 3 } },
   msqrt: { children: [...CHILDREN_PRESENTATION], attributes: ['intent'] },
   mroot: { children: [...CHILDREN_PRESENTATION], attributes: ['intent'], arity: { exact: 2 } },
   mfenced: { children: [...CHILDREN_PRESENTATION], attributes: ['open', 'close', 'separators', 'intent'] },
@@ -166,6 +178,7 @@ function runLint(mathmlSource, options = {}) {
   const source = String(mathmlSource || '');
   const findings = [];
   const profile = normalizeProfile(options.profile);
+  const ignoreDataMjxAttributes = options.ignoreDataMjxAttributes !== false;
 
   if (!source.trim()) {
     findings.push(makeFinding('info', 'L001', 'Empty expression', 'No MathML entered yet.', SPEC_LINKS.syntax));
@@ -191,7 +204,7 @@ function runLint(mathmlSource, options = {}) {
   const allElements = [...doc.querySelectorAll('*')];
   for (const node of allElements) {
     validateTag(findings, node, profile);
-    validateAttributes(findings, node);
+    validateAttributes(findings, node, { ignoreDataMjxAttributes });
     validateAttributeValues(findings, node);
     validateChildren(findings, node);
     validateArity(findings, node);
@@ -255,13 +268,22 @@ function validateTag(findings, node, profile) {
   }
 }
 
-function validateAttributes(findings, node) {
+function validateAttributes(findings, node, options = {}) {
   const tag = normalize(node.tagName);
   const rule = TAG_RULES[tag];
   const allowed = new Set([...(rule?.attributes || []), ...GLOBAL_ATTRIBUTES]);
+  const ignoreDataMjxAttributes = options.ignoreDataMjxAttributes !== false;
 
   for (const attr of [...node.attributes]) {
     const attrName = attr.name;
+    if (/^data-mjx/i.test(attrName)) {
+      if (ignoreDataMjxAttributes) {
+        continue;
+      }
+      findings.push(makeFinding('warn', 'L020', 'Unknown attribute', `Attribute "${attrName}" is not recognized on <${tag}>.`, SPEC_LINKS.presentation));
+      continue;
+    }
+
     if (attrName.startsWith('data-')) {
       continue;
     }

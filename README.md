@@ -9,6 +9,7 @@ M7 is implemented:
 - Syntax-highlight preview for each editor
 - XML formatting actions (`Format A`, `Format B`)
 - Contextual help for valid child tags and attributes based on cursor location
+- Intent Assistant for applying/replacing `intent` on the current cursor tag using templates or custom values
 - Warning lists for parse errors, unknown tags, and unknown attributes
 - Simultaneous native MathML rendering (A/B)
 - Simultaneous MathJax rendering (A/B)
@@ -24,6 +25,7 @@ M7 is implemented:
 - Engine and channel status indicators for MathCAT/SRE
 - Lint findings panels (A/B) with severities (`error`, `warn`, `info`, `ok`)
 - Lint profile selector (`authoring-guidance`, `strict-core`)
+- `Ignore data-mjx*` toggle to suppress MathJax runtime data-attribute noise in lint/editor warnings
 - Intent suggestion panels (A/B) with W3C reference links
 - A/B output diff panel (same channel only):
   - channel selector

@@ -1,10 +1,15 @@
-function tokenize(text) {
-  return String(text || '').match(/\s+|[^\s]+/g) || [];
+function tokenize(text, options = {}) {
+  const mode = options.granularity === 'char' ? 'char' : 'word';
+  const source = String(text || '');
+  if (mode === 'char') {
+    return Array.from(source);
+  }
+  return source.match(/\s+|[^\s]+/g) || [];
 }
 
-function computeTokenDiff(aText, bText) {
-  const a = tokenize(aText);
-  const b = tokenize(bText);
+function computeTokenDiff(aText, bText, options = {}) {
+  const a = tokenize(aText, options);
+  const b = tokenize(bText, options);
 
   const dp = buildLcsTable(a, b);
   const edits = backtrackDiff(a, b, dp);
@@ -114,8 +119,8 @@ function buildSideBySide(edits) {
   return { left, right };
 }
 
-function diffOutputs(aText, bText) {
-  const edits = computeTokenDiff(aText, bText);
+function diffOutputs(aText, bText, options = {}) {
+  const edits = computeTokenDiff(aText, bText, options);
   const equal = edits.every((entry) => entry.type === 'equal');
 
   return {

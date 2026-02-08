@@ -608,6 +608,28 @@ button:hover {
   gap: 0.75rem;
 }
 
+.intent-assistant {
+  margin-top: 0.75rem;
+  border-top: 1px solid var(--border);
+  padding-top: 0.7rem;
+}
+
+.intent-assistant h3 {
+  margin: 0 0 0.35rem 0;
+}
+
+.intent-assistant-controls {
+  display: grid;
+  grid-template-columns: 230px 1fr auto;
+  gap: 0.5rem;
+  align-items: end;
+}
+
+.intent-assistant-controls input,
+.intent-assistant-controls select {
+  width: 100%;
+}
+
 .analysis-section {
   margin-top: 0.9rem;
   border-top: 1px solid var(--border);
@@ -690,6 +712,7 @@ button:hover {
 
   .editor-grid,
   .nimas-controls,
+  .intent-assistant-controls,
   .latex-grid,
   .help-grid,
   .split-output,
