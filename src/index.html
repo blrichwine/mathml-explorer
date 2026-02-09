@@ -11,6 +11,7 @@
       <header class="panel topbar" aria-label="Application Controls">
         <h1>MathML Learning Workbench</h1>
         <div class="topbar-controls" role="group" aria-label="Rendering controls">
+          <a id="lint-tests-badge" class="lint-tests-badge lint-tests-running" href="./lint-tests.html" title="Open linter regression tests">Lint tests: running...</a>
           <label>
             MathJax Version
             <select id="mathjax-version-select" name="mathjax-version"></select>
@@ -183,6 +184,20 @@
             </article>
           </div>
 
+          <section class="panel lint-findings-section" aria-label="Lint Findings">
+            <h3>Lint Findings</h3>
+            <div class="analysis-grid">
+              <article class="analysis-card">
+                <h4>Expression A</h4>
+                <ul id="lint-findings-a" class="analysis-list"></ul>
+              </article>
+              <article class="analysis-card">
+                <h4>Expression B</h4>
+                <ul id="lint-findings-b" class="analysis-list"></ul>
+              </article>
+            </div>
+          </section>
+
           <section id="help-pane" class="panel embedded-help" aria-live="polite" aria-label="Context Help">
             <h2>Context Help</h2>
             <p id="context-summary" class="context-summary">Move the cursor in MathML A or B to show tag guidance.</p>
@@ -275,32 +290,19 @@
               </div>
               <p class="small-note">Core property reference: <a href="https://w3c.github.io/mathml-docs/intent-core-properties/" target="_blank" rel="noreferrer noopener">W3C Intent Core Properties</a></p>
               <p id="intent-assistant-status" class="small-note status-idle">Ready to apply intent.</p>
-            </section>
-
-            <section class="analysis-section" aria-label="Lint and Intent Analysis">
-              <h3>Lint Findings</h3>
-              <div class="analysis-grid">
-                <article class="analysis-card">
-                  <h4>Expression A</h4>
-                  <ul id="lint-findings-a" class="analysis-list"></ul>
-                </article>
-                <article class="analysis-card">
-                  <h4>Expression B</h4>
-                  <ul id="lint-findings-b" class="analysis-list"></ul>
-                </article>
-              </div>
-
-              <h3>Intent Suggestions</h3>
-              <div class="analysis-grid">
-                <article class="analysis-card">
-                  <h4>Expression A</h4>
-                  <ul id="intent-suggestions-a" class="analysis-list"></ul>
-                </article>
-                <article class="analysis-card">
-                  <h4>Expression B</h4>
-                  <ul id="intent-suggestions-b" class="analysis-list"></ul>
-                </article>
-              </div>
+              <details class="intent-suggestions-details">
+                <summary>Intent Suggestions</summary>
+                <div class="analysis-grid">
+                  <article class="analysis-card">
+                    <h4>Expression A</h4>
+                    <ul id="intent-suggestions-a" class="analysis-list"></ul>
+                  </article>
+                  <article class="analysis-card">
+                    <h4>Expression B</h4>
+                    <ul id="intent-suggestions-b" class="analysis-list"></ul>
+                  </article>
+                </div>
+              </details>
             </section>
           </section>
         </section>

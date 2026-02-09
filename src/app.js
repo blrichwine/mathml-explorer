@@ -1,5 +1,6 @@
 import { createEditorController } from './editor.js';
 import { runLint } from './lint.js';
+import { runLintTestSuite } from './lint-tests.js';
 import { getIntentSuggestions } from './intent.js';
 import { diffOutputs } from './diff.js';
 import { convertLatexToMathML } from './latex.js';
@@ -1356,6 +1357,7 @@ function bootstrap() {
   renderNimasPanel(store.getState());
   renderEpubPanel(store.getState());
   renderLatexPreview('');
+  renderLintTestsBadge();
   setPersistenceStatus(queryHydrated.message || 'Ready.', queryHydrated.level || 'idle');
   setLatexStatus('LaTeX conversion idle.', 'idle');
   bus.emit('state:changed', store.getState());
@@ -1367,4 +1369,30 @@ export { MATHJAX_VERSIONS, createInitialState };
 
 function clampRenderZoom(value) {
   return Math.min(400, Math.max(100, Math.round(value)));
+}
+
+function renderLintTestsBadge() {
+  const badge = document.querySelector('#lint-tests-badge');
+  if (!badge) {
+    return;
+  }
+
+  try {
+    const report = runLintTestSuite();
+    const failed = report.total - report.passedCount;
+    if (report.passed) {
+      badge.textContent = 'Lint tests: all pass';
+      badge.className = 'lint-tests-badge lint-tests-pass';
+      badge.title = `Open linter regression tests (${report.passedCount}/${report.total} passed)`;
+      return;
+    }
+
+    badge.textContent = `Lint tests: ${failed}/${report.total} failed`;
+    badge.className = 'lint-tests-badge lint-tests-fail';
+    badge.title = `Open linter regression tests (${report.passedCount}/${report.total} passed)`;
+  } catch {
+    badge.textContent = 'Lint tests: unavailable';
+    badge.className = 'lint-tests-badge lint-tests-running';
+    badge.title = 'Open linter regression tests';
+  }
 }
