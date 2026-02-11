@@ -1,4 +1,5 @@
 import { lookupUnicodeNameByCodePoint } from './unicode.js';
+import { createMathMLSchemaAdapter, dedupeValues, isAllowedAttributeName } from './mathml-schema-adapter.js';
 
 const MATHML_SAMPLE = `<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
   <mrow>
@@ -11,10 +12,10 @@ const MATHML_SAMPLE = `<math xmlns="http://www.w3.org/1998/Math/MathML" display=
   </mrow>
 </math>`;
 
-const GLOBAL_ATTRIBUTES = [
-  'class',
-  'style',
-  'id',
+const SCHEMA_ADAPTER = createMathMLSchemaAdapter({ includeOnStarInAttributes: true });
+
+const EDITOR_GLOBAL_ATTRIBUTES = dedupeValues([
+  ...SCHEMA_ADAPTER.normalizedUniversalAttributes,
   'display',
   'mathsize',
   'mathcolor',
@@ -22,7 +23,39 @@ const GLOBAL_ATTRIBUTES = [
   'href',
   'intent',
   'arg'
-];
+]);
+const CUSTOM_EDITOR_ATTRIBUTES = {
+  math: ['intent', 'altimg', 'alttext', 'altimg-width', 'altimg-height', 'altimg-valign'],
+  mo: ['intent'],
+  mi: ['intent'],
+  mn: ['intent'],
+  mtext: ['intent'],
+  ms: ['intent'],
+  mrow: ['intent'],
+  mfrac: ['intent'],
+  msup: ['intent'],
+  msub: ['intent'],
+  msubsup: ['intent'],
+  mmultiscripts: ['intent'],
+  mover: ['intent'],
+  munder: ['intent'],
+  munderover: ['intent'],
+  msqrt: ['intent'],
+  mroot: ['intent'],
+  mfenced: ['intent'],
+  mtable: ['intent'],
+  mtr: ['intent'],
+  mlabeledtr: ['intent'],
+  mtd: ['intent'],
+  semantics: ['intent'],
+  menclose: ['intent'],
+  merror: ['intent'],
+  mpadded: ['intent'],
+  mphantom: ['intent'],
+  maction: ['intent']
+};
+const MATHML_REFERENCE = buildEditorReference();
+const KNOWN_EDITOR_TAGS = SCHEMA_ADAPTER.knownTags;
 
 const ENTITY_REFERENCE_DESCRIPTIONS = {
   sum: 'summation operator',
@@ -37,120 +70,18 @@ const ENTITY_REFERENCE_DESCRIPTIONS = {
   NonBreakingSpace: 'non-breaking space'
 };
 
-const MATHML_REFERENCE = {
-  math: {
-    children: ['mrow', 'mi', 'mn', 'mo', 'mtext', 'ms', 'mfrac', 'msup', 'msub', 'msubsup', 'mmultiscripts', 'mover', 'munder', 'munderover', 'msqrt', 'mroot', 'mfenced', 'mtable', 'semantics'],
-    attributes: ['xmlns', 'display', 'mathvariant', 'intent', 'altimg', 'alttext', 'altimg-width', 'altimg-height', 'altimg-valign']
-  },
-  mrow: {
-    children: ['mi', 'mn', 'mo', 'mtext', 'ms', 'mspace', 'mfrac', 'msup', 'msub', 'msubsup', 'mmultiscripts', 'mover', 'munder', 'munderover', 'msqrt', 'mroot', 'mfenced', 'mtable'],
-    attributes: ['intent']
-  },
-  mi: {
-    children: ['text'],
-    attributes: ['mathvariant', 'intent']
-  },
-  mn: {
-    children: ['text'],
-    attributes: ['mathvariant', 'intent']
-  },
-  mo: {
-    children: ['text'],
-    attributes: ['mathvariant', 'form', 'fence', 'separator', 'stretchy', 'symmetric', 'intent']
-  },
-  mtext: {
-    children: ['text'],
-    attributes: ['mathvariant', 'intent']
-  },
-  ms: {
-    children: ['text'],
-    attributes: ['mathvariant', 'lquote', 'rquote', 'intent']
-  },
-  mspace: {
-    children: [],
-    attributes: ['width', 'height', 'depth']
-  },
-  mfrac: {
-    children: ['numerator', 'denominator'],
-    attributes: ['linethickness', 'bevelled', 'intent']
-  },
-  msup: {
-    children: ['base', 'superscript'],
-    attributes: ['intent']
-  },
-  msub: {
-    children: ['base', 'subscript'],
-    attributes: ['intent']
-  },
-  msubsup: {
-    children: ['base', 'subscript', 'superscript'],
-    attributes: ['intent']
-  },
-  mmultiscripts: {
-    children: ['base', 'post-subscript', 'post-superscript', 'mprescripts', 'pre-subscript', 'pre-superscript', 'none'],
-    attributes: ['intent']
-  },
-  mprescripts: {
-    children: [],
-    attributes: []
-  },
-  none: {
-    children: [],
-    attributes: []
-  },
-  mover: {
-    children: ['base', 'overscript'],
-    attributes: ['accent', 'intent']
-  },
-  munder: {
-    children: ['base', 'underscript'],
-    attributes: ['accentunder', 'intent']
-  },
-  munderover: {
-    children: ['base', 'underscript', 'overscript'],
-    attributes: ['accent', 'accentunder', 'intent']
-  },
-  msqrt: {
-    children: ['mrow', 'mi', 'mn', 'mo', 'mfrac', 'msup', 'msub', 'msubsup', 'mmultiscripts', 'mover', 'munder', 'munderover'],
-    attributes: ['intent']
-  },
-  mroot: {
-    children: ['base', 'index'],
-    attributes: ['intent']
-  },
-  mfenced: {
-    children: ['mrow', 'mi', 'mn', 'mo', 'mfrac', 'msup', 'msub', 'msubsup', 'mmultiscripts', 'mover', 'munder', 'munderover'],
-    attributes: ['open', 'close', 'separators', 'intent']
-  },
-  mtable: {
-    children: ['mtr', 'mlabeledtr'],
-    attributes: ['columnalign', 'rowalign', 'intent']
-  },
-  mtr: {
-    children: ['mtd'],
-    attributes: ['intent']
-  },
-  mlabeledtr: {
-    children: ['mtd'],
-    attributes: ['intent']
-  },
-  mtd: {
-    children: ['mrow', 'mi', 'mn', 'mo', 'mfrac', 'msup', 'msub', 'msubsup', 'mmultiscripts', 'mover', 'munder', 'munderover'],
-    attributes: ['rowspan', 'columnspan', 'intent']
-  },
-  semantics: {
-    children: ['mrow', 'annotation', 'annotation-xml'],
-    attributes: ['intent']
-  },
-  annotation: {
-    children: ['text'],
-    attributes: ['encoding', 'src']
-  },
-  'annotation-xml': {
-    children: ['any'],
-    attributes: ['encoding', 'src']
+function buildEditorReference() {
+  const entries = {};
+  for (const [tag, rule] of Object.entries(SCHEMA_ADAPTER.presentationRules || {})) {
+    const allowedAttributes = rule.attributes || [];
+    const customAttributes = (CUSTOM_EDITOR_ATTRIBUTES[tag] || []).map((entry) => normalizeTag(entry));
+    entries[tag] = {
+      children: rule.children || [],
+      attributes: dedupeValues([...allowedAttributes, ...customAttributes])
+    };
   }
-};
+  return entries;
+}
 
 function createEditorController(store, bus) {
   const aInput = document.querySelector('#mathml-a-input');
@@ -447,8 +378,10 @@ function applyFormattedMathML(expressionKey, store) {
 }
 
 function formatMathML(source) {
+  const assumedNamespace = maybeAssumeMathPrefixNamespace(source);
+  const normalizedSource = normalizeFormattingInput(assumedNamespace.source);
   const entityTokens = new Map();
-  const protectedSource = protectEntityReferences(source, entityTokens);
+  const protectedSource = protectEntityReferences(normalizedSource, entityTokens);
   const parser = new DOMParser();
   const xmlDoc = parser.parseFromString(protectedSource, 'application/xml');
   const parseError = xmlDoc.querySelector('parsererror');
@@ -462,6 +395,103 @@ function formatMathML(source) {
   serializeNode(root, 0, lines);
   const formatted = lines.join('\n');
   return { value: restoreEntityReferences(formatted, entityTokens) };
+}
+
+function normalizeFormattingInput(source) {
+  const text = String(source || '').replace(/\r\n?/g, '\n');
+  let output = '';
+  let index = 0;
+
+  while (index < text.length) {
+    if (text.startsWith('<!--', index)) {
+      const end = text.indexOf('-->', index + 4);
+      if (end === -1) {
+        output += text.slice(index);
+        break;
+      }
+      output += text.slice(index, end + 3);
+      index = end + 3;
+      continue;
+    }
+
+    const char = text[index];
+    if (char !== '<') {
+      output += char;
+      index += 1;
+      continue;
+    }
+
+    const tagEnd = findTagEnd(text, index + 1);
+    if (tagEnd === -1) {
+      output += text.slice(index);
+      break;
+    }
+
+    const rawTag = text.slice(index, tagEnd + 1);
+    output += normalizeTagWhitespace(rawTag);
+    index = tagEnd + 1;
+  }
+
+  return output;
+}
+
+function findTagEnd(source, startIndex) {
+  let quote = '';
+  for (let index = startIndex; index < source.length; index += 1) {
+    const char = source[index];
+    if (quote) {
+      if (char === quote) {
+        quote = '';
+      }
+      continue;
+    }
+    if (char === '"' || char === "'") {
+      quote = char;
+      continue;
+    }
+    if (char === '>') {
+      return index;
+    }
+  }
+  return -1;
+}
+
+function normalizeTagWhitespace(rawTag) {
+  let output = '';
+  let quote = '';
+  let previousWasSpace = false;
+
+  for (let index = 0; index < rawTag.length; index += 1) {
+    const char = rawTag[index];
+    if (quote) {
+      output += char;
+      if (char === quote) {
+        quote = '';
+      }
+      previousWasSpace = false;
+      continue;
+    }
+
+    if (char === '"' || char === "'") {
+      quote = char;
+      output += char;
+      previousWasSpace = false;
+      continue;
+    }
+
+    if (/\s/.test(char)) {
+      if (!previousWasSpace) {
+        output += ' ';
+        previousWasSpace = true;
+      }
+      continue;
+    }
+
+    output += char;
+    previousWasSpace = false;
+  }
+
+  return output.replace(/\s*>$/g, '>');
 }
 
 function protectEntityReferences(source, entityTokens) {
@@ -557,8 +587,13 @@ function collectWarnings(source, options = {}) {
     return [{ type: 'info', message: 'Editor is empty.' }];
   }
 
+  const assumedNamespace = maybeAssumeMathPrefixNamespace(source);
+  if (assumedNamespace.assumed) {
+    warnings.push({ type: 'info', message: 'Assuming xmlns:m="http://www.w3.org/1998/Math/MathML".' });
+  }
+
   const parser = new DOMParser();
-  const xmlDoc = parser.parseFromString(source, 'application/xml');
+  const xmlDoc = parser.parseFromString(assumedNamespace.source, 'application/xml');
   const parseError = xmlDoc.querySelector('parsererror');
 
   if (parseError) {
@@ -566,8 +601,8 @@ function collectWarnings(source, options = {}) {
     return warnings;
   }
 
-  const discoveredTags = [...source.matchAll(/<\/?\s*([a-zA-Z][\w:-]*)/g)].map((match) => normalizeTag(match[1]));
-  const knownTags = new Set(Object.keys(MATHML_REFERENCE));
+  const discoveredTags = [...assumedNamespace.source.matchAll(/<\/?\s*([a-zA-Z][\w:-]*)/g)].map((match) => normalizeTag(match[1]));
+  const knownTags = KNOWN_EDITOR_TAGS;
 
   for (const tag of discoveredTags) {
     if (!knownTags.has(tag)) {
@@ -576,7 +611,7 @@ function collectWarnings(source, options = {}) {
   }
 
   const openTagRegex = /<([a-zA-Z][\w:-]*)([^>]*)>/g;
-  for (const match of source.matchAll(openTagRegex)) {
+  for (const match of assumedNamespace.source.matchAll(openTagRegex)) {
     const rawTag = normalizeTag(match[1]);
     if (match[0].startsWith('</')) {
       continue;
@@ -584,13 +619,16 @@ function collectWarnings(source, options = {}) {
 
     const attrChunk = match[2] || '';
     const attributes = [...attrChunk.matchAll(/([a-zA-Z_:][\w:.-]*)\s*=\s*(["'])([\s\S]*?)\2/g)].map((attrMatch) => attrMatch[1]);
-    const allowed = new Set([...(MATHML_REFERENCE[rawTag]?.attributes || []), ...GLOBAL_ATTRIBUTES]);
+    const allowed = new Set([...(MATHML_REFERENCE[rawTag]?.attributes || []), ...EDITOR_GLOBAL_ATTRIBUTES]);
 
     for (const attr of attributes) {
+      if (/^xmlns(?::|$)/i.test(attr)) {
+        continue;
+      }
       if (ignoreDataMjxAttributes && /^data-mjx/i.test(attr)) {
         continue;
       }
-      if (!allowed.has(attr)) {
+      if (!isAllowedAttributeName(attr, allowed)) {
         warnings.push({ type: 'warn', message: `Unknown attribute "${attr}" on <${rawTag}>.` });
       }
     }
@@ -656,7 +694,7 @@ function updateContextForEditor(key, store, editor, contextSummary, contextEntit
     }
   }
 
-  const attrs = [...entry.attributes, ...GLOBAL_ATTRIBUTES].filter((value, index, arr) => arr.indexOf(value) === index);
+  const attrs = dedupeValues([...entry.attributes, ...EDITOR_GLOBAL_ATTRIBUTES]);
   for (const attr of attrs) {
     appendListItem(attrList, attr);
   }
@@ -846,7 +884,30 @@ function extractIntentAttribute(openTagRaw) {
 }
 
 function normalizeTag(tagName) {
-  return tagName.trim().toLowerCase();
+  const normalized = tagName.trim().toLowerCase();
+  if (normalized.includes(':')) {
+    return normalized.split(':').pop() || normalized;
+  }
+  return normalized;
+}
+
+function maybeAssumeMathPrefixNamespace(source) {
+  const text = String(source || '');
+  const rootMatch = text.match(/<\s*m:math\b([\s\S]*?)>/i);
+  if (!rootMatch) {
+    return { source: text, assumed: false };
+  }
+
+  const rootOpenTag = rootMatch[0];
+  if (/xmlns:m\s*=\s*["'][^"']+["']/i.test(rootOpenTag)) {
+    return { source: text, assumed: false };
+  }
+
+  const patchedOpenTag = rootOpenTag.replace(/>$/, ' xmlns:m="http://www.w3.org/1998/Math/MathML">');
+  return {
+    source: text.replace(rootOpenTag, patchedOpenTag),
+    assumed: true
+  };
 }
 
 export { createEditorController, formatMathML };

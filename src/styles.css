@@ -663,6 +663,20 @@ button:hover {
   font-size: 0.82rem;
 }
 
+.output-text-braille {
+  font-family: "SimBraille", "Swell Braille", "Apple Braille", "IBM Plex Mono", monospace;
+  font-size: 1.48rem;
+  line-height: 1.45;
+  letter-spacing: 0.015em;
+}
+
+.diff-pane-braille {
+  font-family: "SimBraille", "Swell Braille", "Apple Braille", "IBM Plex Mono", monospace;
+  font-size: 1.48rem;
+  line-height: 1.45;
+  letter-spacing: 0.015em;
+}
+
 .context-summary {
   margin-top: 0.4rem;
   margin-bottom: 0.7rem;
@@ -758,6 +772,12 @@ button:hover {
 
 .analysis-item a {
   font-size: 0.82rem;
+}
+
+.analysis-references {
+  display: flex;
+  gap: 0.55rem;
+  flex-wrap: wrap;
 }
 
 .severity-error strong {

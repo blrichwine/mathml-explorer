@@ -12,6 +12,8 @@ M7 is implemented:
 - Entity-aware context help (named/numeric entities with Unicode code point and UnicodeData name lookup)
 - Intent Assistant for applying/replacing `intent` on the current cursor tag using templates or custom values
 - Warning lists for parse errors, unknown tags, and unknown attributes
+- Schema-driven lint base rules sourced from `src/mathml-data-v3.js` (with project overlays)
+- Shared schema adapter for linter and editor context help in `src/mathml-schema-adapter.js`
 - Simultaneous native MathML rendering (A/B)
 - Simultaneous MathJax rendering (A/B)
 - Runtime MathJax version switching (2.7.9, 3.2.2, 4.0.0)
@@ -25,7 +27,11 @@ M7 is implemented:
   - SRE MathSpeak
 - Engine and channel status indicators for MathCAT/SRE
 - Lint findings panels (A/B) with severities (`error`, `warn`, `info`, `ok`)
-- Lint profile selector (`authoring-guidance`, `strict-core`)
+- Lint profile selector:
+  - `Presentation MathML3`
+  - `Core MathML3`
+  - `Presentation MathML4` (provisional mapping + intent overlay)
+  - `Core MathML4` (provisional mapping + intent overlay)
 - `Ignore data-mjx*` toggle to suppress MathJax runtime data-attribute noise in lint/editor warnings
 - Intent suggestion panels (A/B) with W3C reference links
 - A/B output diff panel (same channel only):

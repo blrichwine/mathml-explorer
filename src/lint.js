@@ -1,8 +1,19 @@
+import { SpecLevel } from './mathml-data-v3.js';
+import { createMathMLSchemaAdapter } from './mathml-schema-adapter.js';
+
 const SPEC_LINKS = {
   core: 'https://w3c.github.io/mathml-core/',
   intent: 'https://w3c.github.io/mathml/#intent-expressions',
   presentation: 'https://w3c.github.io/mathml/#presentation-markup',
-  syntax: 'https://w3c.github.io/mathml/#fundamentals'
+  syntax: 'https://w3c.github.io/mathml/#fundamentals',
+  spacingWarning: 'https://www.w3.org/TR/MathML/chapter3.html#id.3.3.6.5',
+  daisyInvisibleTimes: 'https://www.daisy.org/z3986/structure/SG-DAISY3/part2-math.html',
+  daisyInvisibleSeparator: 'https://www.daisy.org/z3986/structure/SG-DAISY3/part2-math.html',
+  daisyImplicitAddition: 'https://www.daisy.org/z3986/structure/SG-DAISY3/part2-math.html'
+};
+const PROJECT_LINKS = {
+  compatibility: '../BROWSER_COMPATIBILITY.md',
+  linter: '../LINTER.md'
 };
 const MATHML_NAMESPACE = 'http://www.w3.org/1998/Math/MathML';
 
@@ -22,6 +33,10 @@ const GLOBAL_ATTRIBUTES = new Set([
 
 const TOKEN_ELEMENTS = new Set(['mi', 'mn', 'mo', 'mtext', 'ms']);
 const DEPRECATED_TAGS = new Set(['mfenced', 'mstyle']);
+const SCHEMA_ADAPTERS = Object.freeze({
+  mathml3: createMathMLSchemaAdapter({ includeOnStarInAttributes: false, mathmlVersion: 'mathml3' }),
+  mathml4: createMathMLSchemaAdapter({ includeOnStarInAttributes: false, mathmlVersion: 'mathml4' })
+});
 const ELEMENT_COMPAT = {
   math: { tier: 'core', note: 'Core presentation root.' },
   mrow: { tier: 'core', note: 'Core grouping construct.' },
@@ -134,6 +149,54 @@ const TAG_RULES = {
   mstyle: { children: ['any'], attributes: ['mathvariant', 'displaystyle', 'scriptlevel'], arity: { min: 1 } }
 };
 
+
+const LINT_PROFILES = new Map([
+  [
+    'presentation-mathml3',
+    {
+      id: 'presentation-mathml3',
+      subset: 'presentation',
+      version: 'mathml3',
+      showSemanticsHints: true,
+      warnForProfileBoundary: true,
+      allowContentInAnnotations: true
+    }
+  ],
+  [
+    'core-mathml3',
+    {
+      id: 'core-mathml3',
+      subset: 'core',
+      version: 'mathml3',
+      showSemanticsHints: false,
+      warnForProfileBoundary: true,
+      allowContentInAnnotations: true
+    }
+  ],
+  [
+    'presentation-mathml4',
+    {
+      id: 'presentation-mathml4',
+      subset: 'presentation',
+      version: 'mathml4',
+      showSemanticsHints: true,
+      warnForProfileBoundary: true,
+      allowContentInAnnotations: true
+    }
+  ],
+  [
+    'core-mathml4',
+    {
+      id: 'core-mathml4',
+      subset: 'core',
+      version: 'mathml4',
+      showSemanticsHints: false,
+      warnForProfileBoundary: true,
+      allowContentInAnnotations: true
+    }
+  ]
+]);
+
 const ATTRIBUTE_VALUE_RULES = [
   {
     attr: 'display',
@@ -234,6 +297,94 @@ const KNOWN_MATHVARIANT_VALUES = new Set([
   'looped',
   'stretched'
 ]);
+const IMPLICIT_MULTIPLICATION_SEQUENCE_CONTEXTS = new Set([
+  'math',
+  'mrow',
+  'msqrt',
+  'menclose',
+  'mstyle',
+  'merror',
+  'mpadded',
+  'mphantom',
+  'mtd'
+]);
+const IMPLICIT_MULTIPLICATION_OPERAND_TAGS = new Set([
+  'mi', 'mn',
+  'mrow', 'msup', 'msub', 'msubsup', 'mfrac', 'msqrt', 'mroot',
+  'mfenced', 'mover', 'munder', 'munderover', 'mmultiscripts'
+]);
+const INDEX_SEQUENCE_TOKEN_TAGS = new Set(['mi', 'mn']);
+
+const DEFAULT_FINDING_REFERENCES = new Map([
+  [
+    'L033',
+    [
+      { label: 'MathML spacing warning', url: SPEC_LINKS.spacingWarning, type: 'spec' }
+    ]
+  ],
+  [
+    'L034',
+    [
+      { label: 'MathML spacing warning', url: SPEC_LINKS.spacingWarning, type: 'spec' }
+    ]
+  ],
+  [
+    'L035',
+    [
+      { label: 'MathML presentation', url: SPEC_LINKS.presentation, type: 'spec' },
+      { label: 'Linter rationale', url: PROJECT_LINKS.linter, type: 'project-note' }
+    ]
+  ],
+  [
+    'L070',
+    [
+      { label: 'MathML Core', url: SPEC_LINKS.core, type: 'spec' },
+      { label: 'Browser/eTextbook note', url: PROJECT_LINKS.compatibility, type: 'compat' }
+    ]
+  ],
+  [
+    'L071',
+    [
+      { label: 'MathML Core', url: SPEC_LINKS.core, type: 'spec' },
+      { label: 'Browser/eTextbook note', url: PROJECT_LINKS.compatibility, type: 'compat' }
+    ]
+  ],
+  [
+    'L072',
+    [
+      { label: 'MathML presentation', url: SPEC_LINKS.presentation, type: 'spec' },
+      { label: 'Browser/eTextbook note', url: PROJECT_LINKS.compatibility, type: 'compat' }
+    ]
+  ],
+  [
+    'L073',
+    [
+      { label: 'MathML presentation', url: SPEC_LINKS.presentation, type: 'spec' },
+      { label: 'Browser/eTextbook note', url: PROJECT_LINKS.compatibility, type: 'compat' }
+    ]
+  ],
+  [
+    'L036',
+    [
+      { label: 'DAISY guidance (invisible times)', url: SPEC_LINKS.daisyInvisibleTimes, type: 'spec' },
+      { label: 'MathML Core operators', url: SPEC_LINKS.core, type: 'spec' }
+    ]
+  ],
+  [
+    'L037',
+    [
+      { label: 'DAISY guidance (invisible separator)', url: SPEC_LINKS.daisyInvisibleSeparator, type: 'spec' },
+      { label: 'MathML Core operators', url: SPEC_LINKS.core, type: 'spec' }
+    ]
+  ],
+  [
+    'L038',
+    [
+      { label: 'DAISY guidance (implicit addition)', url: SPEC_LINKS.daisyImplicitAddition, type: 'spec' },
+      { label: 'MathML Core operators', url: SPEC_LINKS.core, type: 'spec' }
+    ]
+  ]
+]);
 
 function runLint(mathmlSource, options = {}) {
   const source = String(mathmlSource || '');
@@ -246,8 +397,21 @@ function runLint(mathmlSource, options = {}) {
     return { sourceLength: source.length, findings };
   }
 
+  const assumedNamespace = maybeAssumeMathPrefixNamespace(source);
+  if (assumedNamespace.assumed) {
+    findings.push(
+      makeFinding(
+        'info',
+        'L006',
+        'Assumed namespace prefix mapping',
+        `Assuming xmlns:m="${MATHML_NAMESPACE}".`,
+        SPEC_LINKS.syntax
+      )
+    );
+  }
+
   const parser = new DOMParser();
-  const doc = parser.parseFromString(source, 'application/xml');
+  const doc = parser.parseFromString(assumedNamespace.source, 'application/xml');
   const parseError = doc.querySelector('parsererror');
 
   if (parseError) {
@@ -256,7 +420,7 @@ function runLint(mathmlSource, options = {}) {
   }
 
   const root = doc.documentElement;
-  if (normalize(root.tagName) !== 'math') {
+  if (normalizeTagName(root.tagName) !== 'math') {
     findings.push(makeFinding('warn', 'L003', 'Unexpected root', `Root element is <${root.tagName}>. A top-level <math> is recommended.`, SPEC_LINKS.presentation));
   } else {
     validateMathRootNamespace(findings, root);
@@ -265,7 +429,7 @@ function runLint(mathmlSource, options = {}) {
   const allElements = [...doc.querySelectorAll('*')];
   for (const node of allElements) {
     validateTag(findings, node, profile);
-    validateAttributes(findings, node, { ignoreDataMjxAttributes });
+    validateAttributes(findings, node, profile, { ignoreDataMjxAttributes });
     validateAttributeValues(findings, node);
     validateMathvariantUsage(findings, node);
     validateNegativeSpacingPatterns(findings, node);
@@ -276,9 +440,12 @@ function runLint(mathmlSource, options = {}) {
     validatePotentialPlainLanguageMiRuns(findings, node);
     validateAmbiguousLargeOperatorOperand(findings, node);
     validateSemanticsAnnotationSupportWarning(findings, node);
-    validateChildren(findings, node);
-    validateArity(findings, node);
-    validateTokenContent(findings, node);
+    validatePotentialMissingInvisibleTimes(findings, node);
+    validatePotentialMissingInvisibleSeparator(findings, node);
+    validatePotentialMissingInvisiblePlus(findings, node);
+    validateChildren(findings, node, profile);
+    validateArity(findings, node, profile);
+    validateTokenContent(findings, node, profile);
     validateCoreCompatibility(findings, node, profile);
     validateSemanticsHints(findings, node, profile);
   }
@@ -294,7 +461,7 @@ function runLint(mathmlSource, options = {}) {
 }
 
 function validateMathvariantUsage(findings, node) {
-  const tag = normalize(node.tagName);
+  const tag = normalizeTagName(node.tagName);
   if (!node.hasAttribute('mathvariant')) {
     return;
   }
@@ -328,7 +495,7 @@ function validateMathvariantUsage(findings, node) {
 }
 
 function validateNegativeSpacingPatterns(findings, node) {
-  const tag = normalize(node.tagName);
+  const tag = normalizeTagName(node.tagName);
 
   if (tag === 'mspace' && isNegativeLength(node.getAttribute('width'))) {
     findings.push(
@@ -362,7 +529,7 @@ function validatePotentialSplitNumberLiteral(findings, node) {
     return;
   }
 
-  const operatorChildren = children.filter((child) => normalize(child.tagName) === 'mo');
+  const operatorChildren = children.filter((child) => normalizeTagName(child.tagName) === 'mo');
   if (!operatorChildren.length) {
     return;
   }
@@ -378,9 +545,9 @@ function validatePotentialSplitNumberLiteral(findings, node) {
     const middle = children[i + 1];
     const right = children[i + 2];
     if (
-      normalize(left.tagName) === 'mn' &&
-      normalize(middle.tagName) === 'mo' &&
-      normalize(right.tagName) === 'mn' &&
+      normalizeTagName(left.tagName) === 'mn' &&
+      normalizeTagName(middle.tagName) === 'mo' &&
+      normalizeTagName(right.tagName) === 'mn' &&
       isNumericToken(left.textContent) &&
       middle.textContent.trim() === ',' &&
       isNumericToken(right.textContent)
@@ -393,7 +560,7 @@ function validatePotentialSplitNumberLiteral(findings, node) {
     return;
   }
 
-  const tag = normalize(node.tagName);
+  const tag = normalizeTagName(node.tagName);
   findings.push(
     makeFinding(
       'warn',
@@ -406,7 +573,7 @@ function validatePotentialSplitNumberLiteral(findings, node) {
 }
 
 function validateSuspiciousScriptBase(findings, node) {
-  const tag = normalize(node.tagName);
+  const tag = normalizeTagName(node.tagName);
   if (!SCRIPT_BASE_TAGS.has(tag)) {
     return;
   }
@@ -416,7 +583,7 @@ function validateSuspiciousScriptBase(findings, node) {
     return;
   }
 
-  if (normalize(base.tagName) !== 'mo') {
+  if (normalizeTagName(base.tagName) !== 'mo') {
     return;
   }
 
@@ -507,7 +674,7 @@ function validateMissingFunctionApplication(findings, node) {
 
   for (let i = 0; i < children.length; i += 1) {
     const current = children[i];
-    if (normalize(current.tagName) !== 'mi') {
+    if (normalizeTagName(current.tagName) !== 'mi') {
       continue;
     }
 
@@ -518,6 +685,9 @@ function validateMissingFunctionApplication(findings, node) {
 
     const next = children[i + 1] || null;
     if (next && isApplyFunctionMo(next)) {
+      continue;
+    }
+    if (hasDeferredFunctionApplicationForScriptBase(node, i)) {
       continue;
     }
 
@@ -531,6 +701,65 @@ function validateMissingFunctionApplication(findings, node) {
       )
     );
   }
+}
+
+function hasDeferredFunctionApplicationForScriptBase(parentNode, childIndex) {
+  if (childIndex !== 0) {
+    return false;
+  }
+
+  const containerTag = normalizeTagName(parentNode.tagName);
+  if (!SCRIPT_BASE_TAGS.has(containerTag)) {
+    return false;
+  }
+
+  const grandParent = parentNode.parentElement;
+  if (!grandParent) {
+    return false;
+  }
+
+  const siblings = [...grandParent.children];
+  const idx = siblings.indexOf(parentNode);
+  if (idx < 0 || idx >= siblings.length - 1) {
+    return false;
+  }
+
+  return isApplyFunctionMo(siblings[idx + 1]);
+}
+
+function isIndexLikeContainer(node) {
+  const parent = node.parentElement;
+  if (!parent) {
+    return false;
+  }
+
+  const parentTag = normalizeTagName(parent.tagName);
+  const childIndex = [...parent.children].indexOf(node);
+  if (childIndex < 0) {
+    return false;
+  }
+
+  if (parentTag === 'msub' && childIndex === 1) {
+    return true;
+  }
+  if (parentTag === 'msubsup' && childIndex === 1) {
+    return true;
+  }
+  if (parentTag === 'mmultiscripts' && childIndex > 0) {
+    const current = parent.children[childIndex];
+    const currentTag = normalizeTagName(current.tagName);
+    if (currentTag === 'mprescripts' || currentTag === 'none') {
+      return false;
+    }
+    const hasPrescriptsMarkerBefore = [...parent.children].slice(1, childIndex).some((entry) => normalizeTagName(entry.tagName) === 'mprescripts');
+    if (!hasPrescriptsMarkerBefore) {
+      return childIndex % 2 === 1;
+    }
+    const markerIndex = [...parent.children].findIndex((entry) => normalizeTagName(entry.tagName) === 'mprescripts');
+    return markerIndex >= 0 && childIndex === markerIndex + 1;
+  }
+
+  return false;
 }
 
 function validateAmbiguousLargeOperatorOperand(findings, node) {
@@ -550,7 +779,7 @@ function validateAmbiguousLargeOperatorOperand(findings, node) {
       continue;
     }
 
-    const firstFollowingTag = normalize(following[0].tagName);
+    const firstFollowingTag = normalizeTagName(following[0].tagName);
     if (firstFollowingTag === 'mrow') {
       continue;
     }
@@ -568,11 +797,11 @@ function validateAmbiguousLargeOperatorOperand(findings, node) {
 }
 
 function validateSemanticsAnnotationSupportWarning(findings, node) {
-  if (normalize(node.tagName) !== 'semantics') {
+  if (normalizeTagName(node.tagName) !== 'semantics') {
     return;
   }
 
-  const annotations = [...node.children].filter((child) => normalize(child.tagName) === 'annotation-xml');
+  const annotations = [...node.children].filter((child) => normalizeTagName(child.tagName) === 'annotation-xml');
   const hasNonEmptyAnnotation = annotations.some((entry) => entry.children.length > 0 || String(entry.textContent || '').trim() !== '');
   if (!hasNonEmptyAnnotation) {
     return;
@@ -589,12 +818,150 @@ function validateSemanticsAnnotationSupportWarning(findings, node) {
   );
 }
 
+function validatePotentialMissingInvisibleTimes(findings, node) {
+  const parentTag = normalizeTagName(node.tagName);
+  if (isIndexLikeContainer(node)) {
+    return;
+  }
+  if (!IMPLICIT_MULTIPLICATION_SEQUENCE_CONTEXTS.has(parentTag)) {
+    return;
+  }
+
+  const children = [...node.children];
+  if (children.length < 2) {
+    return;
+  }
+
+  for (let i = 0; i < children.length - 1; i += 1) {
+    const left = children[i];
+    const right = children[i + 1];
+    const leftTag = normalizeTagName(left.tagName);
+    const rightTag = normalizeTagName(right.tagName);
+
+    if (leftTag === 'mo' || rightTag === 'mo') {
+      continue;
+    }
+    if (!IMPLICIT_MULTIPLICATION_OPERAND_TAGS.has(leftTag) || !IMPLICIT_MULTIPLICATION_OPERAND_TAGS.has(rightTag)) {
+      continue;
+    }
+    if (isLikelyMixedFractionPair(left, right)) {
+      continue;
+    }
+    if (isLikelyWordRunPair(children, i, i + 1)) {
+      continue;
+    }
+
+    findings.push(
+      makeFinding(
+        'info',
+        'L036',
+        'Possible missing invisible times',
+        `Adjacent <${leftTag}> and <${rightTag}> in <${parentTag}> may represent tacit multiplication. Consider inserting <mo>&#x2062;</mo> when multiplication is intended.`,
+        SPEC_LINKS.daisyInvisibleTimes
+      )
+    );
+  }
+}
+
+function validatePotentialMissingInvisibleSeparator(findings, node) {
+  const tag = normalizeTagName(node.tagName);
+  if (tag !== 'mrow' || !isIndexLikeContainer(node)) {
+    return;
+  }
+
+  const children = [...node.children];
+  if (children.length < 2) {
+    return;
+  }
+
+  const hasInvisibleSeparator = children.some((child) => isInvisibleSeparatorMo(child));
+  if (hasInvisibleSeparator) {
+    return;
+  }
+
+  const hasVisibleComma = children.some((child) => normalizeTagName(child.tagName) === 'mo' && child.textContent.trim() === ',');
+  if (hasVisibleComma) {
+    return;
+  }
+
+  let adjacencyCount = 0;
+  for (let i = 0; i < children.length - 1; i += 1) {
+    const leftTag = normalizeTagName(children[i].tagName);
+    const rightTag = normalizeTagName(children[i + 1].tagName);
+    if (INDEX_SEQUENCE_TOKEN_TAGS.has(leftTag) && INDEX_SEQUENCE_TOKEN_TAGS.has(rightTag)) {
+      adjacencyCount += 1;
+    }
+  }
+
+  if (!adjacencyCount) {
+    return;
+  }
+
+  findings.push(
+    makeFinding(
+      'warn',
+      'L037',
+      'Possible missing invisible separator',
+      `Index-like sequence in <${tag}> contains adjacent tokens without explicit separation. Consider inserting <mo>&#x2063;</mo> where omitted commas are semantically intended.`,
+      SPEC_LINKS.daisyInvisibleSeparator
+    )
+  );
+}
+
+function validatePotentialMissingInvisiblePlus(findings, node) {
+  const parentTag = normalizeTagName(node.tagName);
+  if (!IMPLICIT_MULTIPLICATION_SEQUENCE_CONTEXTS.has(parentTag)) {
+    return;
+  }
+
+  const children = [...node.children];
+  if (children.length < 2) {
+    return;
+  }
+
+  for (let i = 0; i < children.length - 1; i += 1) {
+    const left = children[i];
+    const right = children[i + 1];
+    if (!isLikelyMixedFractionPair(left, right)) {
+      continue;
+    }
+
+    findings.push(
+      makeFinding(
+        'warn',
+        'L038',
+        'Possible missing invisible plus',
+        `Mixed-fraction pattern detected in <${parentTag}>: <mn> followed by <mfrac>. Consider inserting <mo>&#x2064;</mo> between whole and fractional parts when implicit addition is intended.`,
+        SPEC_LINKS.daisyImplicitAddition
+      )
+    );
+  }
+}
+
 function validateMathRootNamespace(findings, root) {
   const rawTag = String(root.tagName || '');
   const xmlns = root.getAttribute('xmlns');
+  const namespaceUri = String(root.namespaceURI || '').trim();
+
+  if (namespaceUri && namespaceUri !== MATHML_NAMESPACE) {
+    findings.push(
+      makeFinding(
+        'warn',
+        'L005',
+        'Unexpected MathML namespace',
+        `Root <${rawTag}> has namespace "${namespaceUri}", expected "${MATHML_NAMESPACE}".`,
+        SPEC_LINKS.syntax
+      )
+    );
+    return;
+  }
+
+  if (namespaceUri === MATHML_NAMESPACE) {
+    return;
+  }
 
   // Mild warning only for an unprefixed <math> root missing the default MathML namespace.
-  if (!xmlns && rawTag.toLowerCase() === 'math') {
+  if (!xmlns && normalizeTagName(rawTag) === 'math') {
     findings.push(
       makeFinding(
         'warn',
@@ -621,28 +988,52 @@ function validateMathRootNamespace(findings, root) {
 }
 
 function validateTag(findings, node, profile) {
-  const tag = normalize(node.tagName);
+  const tag = normalizeTagName(node.tagName);
+  const rule = getEffectiveTagRule(tag, profile);
 
-  if (!TAG_RULES[tag]) {
+  if (shouldSkipSchemaChecksForNode(node, profile)) {
+    return;
+  }
+
+  if (!rule) {
     findings.push(makeFinding('warn', 'L010', 'Unknown tag', `Element <${tag}> is not recognized in the current lint profile.`, SPEC_LINKS.core));
     return;
   }
 
+  if (profile.warnForProfileBoundary && !isTagAllowedInProfile(tag, profile)) {
+    findings.push(
+      makeFinding(
+        'warn',
+        'L012',
+        'Outside selected lint profile',
+        `<${tag}> is not included in the selected profile (${profileLabel(profile)}).`,
+        SPEC_LINKS.core
+      )
+    );
+  }
+
   if (DEPRECATED_TAGS.has(tag)) {
-    const severity = profile === 'strict-core' ? 'error' : 'warn';
+    const severity = profile.subset === 'core' ? 'error' : 'warn';
     findings.push(makeFinding(severity, 'L011', 'Deprecated pattern', `Element <${tag}> is legacy in many workflows. Prefer modern structure where possible.`, SPEC_LINKS.presentation));
   }
 }
 
-function validateAttributes(findings, node, options = {}) {
-  const tag = normalize(node.tagName);
-  const rule = TAG_RULES[tag];
+function validateAttributes(findings, node, profile, options = {}) {
+  const tag = normalizeTagName(node.tagName);
+  if (shouldSkipSchemaChecksForNode(node, profile)) {
+    return;
+  }
+  const rule = getEffectiveTagRule(tag, profile);
   const allowed = new Set([...(rule?.attributes || []), ...GLOBAL_ATTRIBUTES]);
   const ignoreDataMjxAttributes = options.ignoreDataMjxAttributes !== false;
 
   for (const attr of [...node.attributes]) {
     const attrName = attr.name;
     const normalizedAttrName = normalize(attrName);
+
+    if (/^xmlns(?::|$)/i.test(attrName)) {
+      continue;
+    }
 
     if (tag === 'math' && DEPRECATED_MATH_ATTRIBUTES.has(normalizedAttrName)) {
       const meta = DEPRECATED_MATH_ATTRIBUTES.get(normalizedAttrName);
@@ -678,7 +1069,7 @@ function validateAttributes(findings, node, options = {}) {
 }
 
 function validateAttributeValues(findings, node) {
-  const tag = normalize(node.tagName);
+  const tag = normalizeTagName(node.tagName);
 
   for (const attr of [...node.attributes]) {
     const attrName = normalize(attr.name);
@@ -714,25 +1105,31 @@ function validateAttributeValues(findings, node) {
   }
 }
 
-function validateChildren(findings, node) {
-  const parentTag = normalize(node.tagName);
-  const parentRule = TAG_RULES[parentTag];
+function validateChildren(findings, node, profile) {
+  const parentTag = normalizeTagName(node.tagName);
+  if (shouldSkipSchemaChecksForNode(node, profile)) {
+    return;
+  }
+  const parentRule = getEffectiveTagRule(parentTag, profile);
 
   if (!parentRule || parentRule.children.includes('any')) {
     return;
   }
 
   for (const child of [...node.children]) {
-    const childTag = normalize(child.tagName);
+    const childTag = normalizeTagName(child.tagName);
     if (!parentRule.children.includes(childTag)) {
       findings.push(makeFinding('warn', 'L030', 'Invalid child', `<${childTag}> is not listed as a valid child of <${parentTag}>.`, SPEC_LINKS.core));
     }
   }
 }
 
-function validateArity(findings, node) {
-  const tag = normalize(node.tagName);
-  const arity = TAG_RULES[tag]?.arity;
+function validateArity(findings, node, profile) {
+  const tag = normalizeTagName(node.tagName);
+  if (shouldSkipSchemaChecksForNode(node, profile)) {
+    return;
+  }
+  const arity = getEffectiveTagRule(tag, profile)?.arity;
   if (!arity) {
     return;
   }
@@ -748,8 +1145,11 @@ function validateArity(findings, node) {
   }
 }
 
-function validateTokenContent(findings, node) {
-  const tag = normalize(node.tagName);
+function validateTokenContent(findings, node, profile) {
+  const tag = normalizeTagName(node.tagName);
+  if (shouldSkipSchemaChecksForNode(node, profile)) {
+    return;
+  }
   if (!TOKEN_ELEMENTS.has(tag)) {
     return;
   }
@@ -760,13 +1160,13 @@ function validateTokenContent(findings, node) {
 }
 
 function validateCoreCompatibility(findings, node, profile) {
-  const tag = normalize(node.tagName);
+  const tag = normalizeTagName(node.tagName);
   const elementCompat = ELEMENT_COMPAT[tag];
 
   if (elementCompat?.tier === 'non-core') {
     findings.push(
       makeFinding(
-        profile === 'strict-core' ? 'warn' : 'info',
+        profile.subset === 'core' ? 'warn' : 'info',
         'L070',
         'Outside MathML Core',
         `<${tag}> is outside the MathML Core browser-focused subset. ${elementCompat.note}`,
@@ -776,7 +1176,7 @@ function validateCoreCompatibility(findings, node, profile) {
   } else if (elementCompat?.tier === 'at-risk') {
     findings.push(
       makeFinding(
-        profile === 'strict-core' ? 'warn' : 'info',
+        profile.subset === 'core' ? 'warn' : 'info',
         'L072',
         'At-risk browser compatibility',
         `<${tag}> is in a compatibility gray-zone for browser-engine/eTextbook pipelines. ${elementCompat.note}`,
@@ -795,7 +1195,7 @@ function validateCoreCompatibility(findings, node, profile) {
     const title = attrCompat.tier === 'non-core' ? 'Potential non-core attribute' : 'At-risk attribute compatibility';
     findings.push(
       makeFinding(
-        profile === 'strict-core' ? 'warn' : 'info',
+        profile.subset === 'core' ? 'warn' : 'info',
         code,
         title,
         `Attribute \"${attr.name}\" on <${tag}> may not be consistently supported in browser-focused MathML pipelines. ${attrCompat.note}`,
@@ -806,11 +1206,11 @@ function validateCoreCompatibility(findings, node, profile) {
 }
 
 function validateSemanticsHints(findings, node, profile) {
-  if (profile === 'strict-core') {
+  if (!profile.showSemanticsHints) {
     return;
   }
 
-  const tag = normalize(node.tagName);
+  const tag = normalizeTagName(node.tagName);
 
   if (tag === 'mrow' && node.children.length > 5 && !node.hasAttribute('intent')) {
     findings.push(makeFinding('info', 'L060', 'Semantics hint', 'Large <mrow> group has no intent. Consider intent for disambiguation.', SPEC_LINKS.intent));
@@ -830,7 +1230,15 @@ function validateSemanticsHints(findings, node, profile) {
 }
 
 function makeFinding(severity, code, title, message, reference) {
-  return { severity, code, title, message, reference };
+  const references = normalizeReferences(code, reference);
+  return {
+    severity,
+    code,
+    title,
+    message,
+    reference: references[0]?.url || '',
+    references
+  };
 }
 
 function dedupeFindings(findings) {
@@ -845,12 +1253,151 @@ function dedupeFindings(findings) {
   });
 }
 
+function normalizeReferences(code, reference) {
+  const out = [];
+  if (Array.isArray(reference)) {
+    for (const entry of reference) {
+      if (!entry || !entry.url) {
+        continue;
+      }
+      out.push({
+        label: entry.label || 'Reference',
+        url: entry.url,
+        type: entry.type || 'spec'
+      });
+    }
+  } else if (typeof reference === 'string' && reference.trim()) {
+    out.push({
+      label: 'Spec reference',
+      url: reference.trim(),
+      type: 'spec'
+    });
+  }
+
+  const defaults = DEFAULT_FINDING_REFERENCES.get(code) || [];
+  for (const entry of defaults) {
+    if (!entry?.url) {
+      continue;
+    }
+    if (out.some((item) => item.url === entry.url)) {
+      continue;
+    }
+    out.push(entry);
+  }
+  return out;
+}
+
+function maybeAssumeMathPrefixNamespace(source) {
+  const text = String(source || '');
+  const rootMatch = text.match(/<\s*m:math\b([\s\S]*?)>/i);
+  if (!rootMatch) {
+    return { source: text, assumed: false };
+  }
+
+  const rootOpenTag = rootMatch[0];
+  if (/xmlns:m\s*=\s*["'][^"']+["']/i.test(rootOpenTag)) {
+    return { source: text, assumed: false };
+  }
+
+  const patchedOpenTag = rootOpenTag.replace(/>$/, ` xmlns:m="${MATHML_NAMESPACE}">`);
+  return {
+    source: text.replace(rootOpenTag, patchedOpenTag),
+    assumed: true
+  };
+}
+
 function normalize(value) {
   return String(value || '').toLowerCase();
 }
 
+function normalizeTagName(value) {
+  const normalized = normalize(value);
+  if (normalized.includes(':')) {
+    return normalized.split(':').pop() || normalized;
+  }
+  return normalized;
+}
+
 function normalizeProfile(profile) {
-  return profile === 'strict-core' ? 'strict-core' : 'authoring-guidance';
+  const normalized = normalize(profile);
+  if (normalized === 'authoring-guidance') {
+    return LINT_PROFILES.get('presentation-mathml3');
+  }
+  if (normalized === 'strict-core') {
+    return LINT_PROFILES.get('core-mathml3');
+  }
+  return LINT_PROFILES.get(normalized) || LINT_PROFILES.get('presentation-mathml3');
+}
+
+function profileLabel(profile) {
+  return `${profile.subset} ${profile.version}`.toUpperCase();
+}
+
+function isInsideAnnotation(node) {
+  let parent = node.parentElement;
+  while (parent) {
+    const tag = normalizeTagName(parent.tagName);
+    if (tag === 'annotation' || tag === 'annotation-xml') {
+      return true;
+    }
+    parent = parent.parentElement;
+  }
+  return false;
+}
+
+function shouldSkipSchemaChecksForNode(node, profile) {
+  const tag = normalizeTagName(node.tagName);
+  if (getEffectiveTagRule(tag, profile)) {
+    return false;
+  }
+
+  const schemaAdapter = getSchemaAdapterForProfile(profile);
+  return Boolean(profile.allowContentInAnnotations && schemaAdapter.contentTags.has(tag) && isInsideAnnotation(node));
+}
+
+function isTagAllowedInProfile(tag, profile) {
+  const schemaAdapter = getSchemaAdapterForProfile(profile);
+  const specs = schemaAdapter.specsByTag.get(tag);
+  if (!specs || !specs.size) {
+    return true;
+  }
+  const expectedSpec = profile.subset === 'core' ? SpecLevel.MATHML_CORE : SpecLevel.PRESENTATION;
+  return specs.has(expectedSpec);
+}
+
+function getEffectiveTagRule(tag, profile) {
+  const schemaAdapter = getSchemaAdapterForProfile(profile);
+  const schemaRule = schemaAdapter.presentationRules[tag] || null;
+  const localRule = TAG_RULES[tag] || null;
+  if (!schemaRule && !localRule) {
+    return null;
+  }
+
+  const mergedAttributes = dedupeArray([...(schemaRule?.attributes || []), ...(localRule?.attributes || [])]);
+  const mergedChildren = mergeChildren(schemaRule?.children, localRule?.children);
+  return {
+    children: mergedChildren,
+    attributes: mergedAttributes,
+    arity: localRule?.arity || schemaRule?.arity || null
+  };
+}
+
+function getSchemaAdapterForProfile(profile) {
+  const version = normalize(profile?.version || 'mathml3');
+  return SCHEMA_ADAPTERS[version] || SCHEMA_ADAPTERS.mathml3;
+}
+
+function mergeChildren(schemaChildren, localChildren) {
+  const left = Array.isArray(schemaChildren) ? schemaChildren : [];
+  const right = Array.isArray(localChildren) ? localChildren : [];
+  if (left.includes('any') || right.includes('any')) {
+    return ['any'];
+  }
+  return dedupeArray([...left, ...right]);
+}
+
+function dedupeArray(values) {
+  return values.filter((value, index, arr) => arr.indexOf(value) === index);
 }
 
 const SCRIPT_BASE_TAGS = new Set(['msup', 'msub', 'msubsup', 'mover', 'munder', 'munderover', 'mmultiscripts']);
@@ -923,8 +1470,8 @@ function isPotentialOverstrikeMpadded(node) {
   }
 
   const directChildren = [...node.children];
-  const hasNegativeMspaceChild = directChildren.some((child) => normalize(child.tagName) === 'mspace' && isNegativeLength(child.getAttribute('width')));
-  const hasVisibleSibling = directChildren.some((child) => normalize(child.tagName) === 'mtext' || normalize(child.tagName) === 'mi' || normalize(child.tagName) === 'mo');
+  const hasNegativeMspaceChild = directChildren.some((child) => normalizeTagName(child.tagName) === 'mspace' && isNegativeLength(child.getAttribute('width')));
+  const hasVisibleSibling = directChildren.some((child) => normalizeTagName(child.tagName) === 'mtext' || normalizeTagName(child.tagName) === 'mi' || normalizeTagName(child.tagName) === 'mo');
 
   return hasNegativeMspaceChild && hasVisibleSibling;
 }
@@ -935,7 +1482,7 @@ function hasNegativeMpaddedAttribute(node) {
 }
 
 function isLargeOperatorConstruct(node) {
-  const tag = normalize(node.tagName);
+  const tag = normalizeTagName(node.tagName);
   if (isLargeOperatorTokenNode(node)) {
     return true;
   }
@@ -949,7 +1496,7 @@ function isLargeOperatorConstruct(node) {
 }
 
 function isLargeOperatorTokenNode(node) {
-  const tag = normalize(node.tagName);
+  const tag = normalizeTagName(node.tagName);
   if (tag !== 'mo' && tag !== 'mi' && tag !== 'mtext') {
     return false;
   }
@@ -987,7 +1534,7 @@ function collectLowercaseMiRuns(children) {
 
   for (let i = 0; i < children.length; i += 1) {
     const child = children[i];
-    const tag = normalize(child.tagName);
+    const tag = normalizeTagName(child.tagName);
     if (tag !== 'mi') {
       flushRun(i - 1);
       continue;
@@ -1008,8 +1555,64 @@ function collectLowercaseMiRuns(children) {
   return runs;
 }
 
+function isLikelyWordRunPair(children, leftIndex, rightIndex) {
+  const left = children[leftIndex];
+  const right = children[rightIndex];
+  if (!left || !right) {
+    return false;
+  }
+  if (normalizeTagName(left.tagName) !== 'mi' || normalizeTagName(right.tagName) !== 'mi') {
+    return false;
+  }
+
+  const leftToken = String(left.textContent || '').trim();
+  const rightToken = String(right.textContent || '').trim();
+  if (!/^[a-z]$/.test(leftToken) || !/^[a-z]$/.test(rightToken)) {
+    return false;
+  }
+
+  let start = leftIndex;
+  while (start > 0) {
+    const prev = children[start - 1];
+    if (normalizeTagName(prev.tagName) !== 'mi' || !/^[a-z]$/.test(String(prev.textContent || '').trim())) {
+      break;
+    }
+    start -= 1;
+  }
+
+  let end = rightIndex;
+  while (end < children.length - 1) {
+    const next = children[end + 1];
+    if (normalizeTagName(next.tagName) !== 'mi' || !/^[a-z]$/.test(String(next.textContent || '').trim())) {
+      break;
+    }
+    end += 1;
+  }
+
+  return end - start + 1 >= 3;
+}
+
+function isLikelyMixedFractionPair(leftNode, rightNode) {
+  if (!leftNode || !rightNode) {
+    return false;
+  }
+
+  const leftTag = normalizeTagName(leftNode.tagName);
+  const rightTag = normalizeTagName(rightNode.tagName);
+  if (leftTag !== 'mn' || rightTag !== 'mfrac') {
+    return false;
+  }
+
+  const wholeNumber = String(leftNode.textContent || '').trim();
+  return /^\d+$/.test(wholeNumber);
+}
+
 function isApplyFunctionMo(node) {
-  return normalize(node.tagName) === 'mo' && String(node.textContent || '').trim() === '\u2061';
+  return normalizeTagName(node.tagName) === 'mo' && String(node.textContent || '').trim() === '\u2061';
+}
+
+function isInvisibleSeparatorMo(node) {
+  return normalizeTagName(node.tagName) === 'mo' && String(node.textContent || '').trim() === '\u2063';
 }
 
 function looksLikeNumericLiteral(value) {

@@ -61,6 +61,18 @@ const CASES = [
     mustExclude: ['L031']
   },
   {
+    name: 'Scripted function base with deferred U+2061 does not warn',
+    source: `<math xmlns="http://www.w3.org/1998/Math/MathML" display="inline">
+  <mrow>
+    <msup><mi>sin</mi><mn>2</mn></msup>
+    <mo>&#x2061;</mo>
+    <mi>x</mi>
+  </mrow>
+</math>`,
+    mustInclude: [],
+    mustExclude: ['L031']
+  },
+  {
     name: 'Large-operator operand grouped in mrow avoids ambiguity warning',
     source: `<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
   <munderover><mo>&#x2211;</mo><mrow><mi>x</mi><mo>=</mo><mn>0</mn></mrow><mrow><mn>10</mn></mrow></munderover>
@@ -278,6 +290,212 @@ const CASES = [
 </math>`,
     mustInclude: ['L020'],
     mustExclude: []
+  },
+  {
+    name: 'Content MathML inside annotation-xml does not trigger unknown-tag warning',
+    source: `<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+  <semantics>
+    <mi>x</mi>
+    <annotation-xml encoding="MathML-Content">
+      <apply><plus/><ci>a</ci><ci>b</ci></apply>
+    </annotation-xml>
+  </semantics>
+</math>`,
+    mustInclude: [],
+    mustExclude: ['L010'],
+    profile: 'presentation-mathml3'
+  },
+  {
+    name: 'Core profile flags presentation-only element with profile boundary warning',
+    source: `<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+  <menclose notation="box"><mi>x</mi></menclose>
+</math>`,
+    mustInclude: ['L012'],
+    mustExclude: [],
+    profile: 'core-mathml3'
+  },
+  {
+    name: 'Tacit multiplication in linear sequence warns for possible missing invisible times',
+    source: `<math xmlns="http://www.w3.org/1998/Math/MathML" display="inline">
+  <mrow>
+    <mi>y</mi><mo>=</mo><mi>m</mi><mi>x</mi><mo>+</mo><mi>b</mi>
+  </mrow>
+</math>`,
+    mustInclude: ['L036'],
+    mustExclude: []
+  },
+  {
+    name: 'Fixed-role children in mfrac do not warn for missing invisible times',
+    source: `<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+  <mfrac>
+    <mi>m</mi>
+    <mi>x</mi>
+  </mfrac>
+</math>`,
+    mustInclude: [],
+    mustExclude: ['L036']
+  },
+  {
+    name: 'msqrt inferred mrow context can warn for missing invisible times',
+    source: `<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+  <msqrt>
+    <mi>x</mi>
+    <mi>y</mi>
+  </msqrt>
+</math>`,
+    mustInclude: ['L036'],
+    mustExclude: []
+  },
+  {
+    name: 'mstyle inferred mrow context can warn for missing invisible times',
+    source: `<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+  <mstyle>
+    <mi>x</mi>
+    <mi>y</mi>
+  </mstyle>
+</math>`,
+    mustInclude: ['L036'],
+    mustExclude: []
+  },
+  {
+    name: 'merror inferred mrow context can warn for missing invisible times',
+    source: `<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+  <merror>
+    <mi>x</mi>
+    <mi>y</mi>
+  </merror>
+</math>`,
+    mustInclude: ['L036'],
+    mustExclude: []
+  },
+  {
+    name: 'mpadded inferred mrow context can warn for missing invisible times',
+    source: `<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+  <mpadded>
+    <mi>x</mi>
+    <mi>y</mi>
+  </mpadded>
+</math>`,
+    mustInclude: ['L036'],
+    mustExclude: []
+  },
+  {
+    name: 'mphantom inferred mrow context can warn for missing invisible times',
+    source: `<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+  <mphantom>
+    <mi>x</mi>
+    <mi>y</mi>
+  </mphantom>
+</math>`,
+    mustInclude: ['L036'],
+    mustExclude: []
+  },
+  {
+    name: 'menclose inferred mrow context can warn for missing invisible times',
+    source: `<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+  <menclose notation="box">
+    <mi>x</mi>
+    <mi>y</mi>
+  </menclose>
+</math>`,
+    mustInclude: ['L036'],
+    mustExclude: []
+  },
+  {
+    name: 'mtd inferred mrow context can warn for missing invisible times',
+    source: `<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+  <mtable>
+    <mtr>
+      <mtd><mi>x</mi><mi>y</mi></mtd>
+    </mtr>
+  </mtable>
+</math>`,
+    mustInclude: ['L036'],
+    mustExclude: []
+  },
+  {
+    name: 'mroot base-index structure does not warn for missing invisible times',
+    source: `<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+  <mroot>
+    <mi>x</mi>
+    <mi>y</mi>
+  </mroot>
+</math>`,
+    mustInclude: [],
+    mustExclude: ['L036']
+  },
+  {
+    name: 'Subscript index pair without separator warns for missing invisible separator',
+    source: `<math xmlns="http://www.w3.org/1998/Math/MathML" display="inline">
+  <msub>
+    <mi>A</mi>
+    <mrow><mi>i</mi><mi>j</mi></mrow>
+  </msub>
+</math>`,
+    mustInclude: ['L037'],
+    mustExclude: ['L036']
+  },
+  {
+    name: 'Subscript index pair with invisible separator does not warn',
+    source: `<math xmlns="http://www.w3.org/1998/Math/MathML" display="inline">
+  <msub>
+    <mi>A</mi>
+    <mrow><mi>i</mi><mo>&#x2063;</mo><mi>j</mi></mrow>
+  </msub>
+</math>`,
+    mustInclude: [],
+    mustExclude: ['L037']
+  },
+  {
+    name: 'Mixed fraction without invisible plus warns for missing implicit addition marker',
+    source: `<math xmlns="http://www.w3.org/1998/Math/MathML" display="inline">
+  <mrow>
+    <mn>12</mn>
+    <mfrac><mn>3</mn><mn>4</mn></mfrac>
+  </mrow>
+</math>`,
+    mustInclude: ['L038'],
+    mustExclude: ['L036']
+  },
+  {
+    name: 'Mixed fraction with invisible plus does not warn',
+    source: `<math xmlns="http://www.w3.org/1998/Math/MathML" display="inline">
+  <mrow>
+    <mn>12</mn>
+    <mo>&#x2064;</mo>
+    <mfrac><mn>3</mn><mn>4</mn></mfrac>
+  </mrow>
+</math>`,
+    mustInclude: [],
+    mustExclude: ['L038']
+  },
+  {
+    name: 'Missing xmlns:m on prefixed MathML is assumed with info finding',
+    source: `<m:math display="inline">
+  <m:mrow>
+    <m:mi>x</m:mi>
+    <m:mo>+</m:mo>
+    <m:mi>y</m:mi>
+  </m:mrow>
+</m:math>`,
+    mustInclude: ['L006'],
+    mustExclude: ['L002', 'L003', 'L010']
+  },
+  {
+    name: 'Prefixed MathML tags are recognized when namespace prefix is declared',
+    source: `<m:math xmlns:m="http://www.w3.org/1998/Math/MathML"
+  xmlns:dtbook="http://www.daisy.org/z3986/2005/dtbook/" display="inline">
+  <m:mrow>
+    <m:mi>y</m:mi>
+    <m:mo>=</m:mo>
+    <m:mi>m</m:mi>
+    <m:mi>x</m:mi>
+    <m:mo>+</m:mo>
+    <m:mi>b</m:mi>
+  </m:mrow>
+</m:math>`,
+    mustInclude: ['L036'],
+    mustExclude: ['L003', 'L010', 'L020']
   }
 ];
 
@@ -287,7 +505,7 @@ function runLintTestSuite() {
   for (let index = 0; index < CASES.length; index += 1) {
     const testCase = CASES[index];
     const findings = runLint(testCase.source, {
-      profile: 'authoring-guidance',
+      profile: testCase.profile || 'presentation-mathml3',
       ignoreDataMjxAttributes: true
     }).findings;
     const codes = new Set(findings.map((entry) => entry.code));

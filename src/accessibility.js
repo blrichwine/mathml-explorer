@@ -5,6 +5,7 @@ const CHANNELS = [
   { id: 'sreClearspeak', label: 'SRE ClearSpeak', engine: 'sre', mode: 'speech', style: 'ClearSpeak' },
   { id: 'sreMathspeak', label: 'SRE MathSpeak', engine: 'sre', mode: 'speech', style: 'MathSpeak' }
 ];
+const MATHML_NAMESPACE = 'http://www.w3.org/1998/Math/MathML';
 
 const DEFAULT_MATHCAT_TAG = '0.7.6-beta.1-web.1';
 const DEFAULT_MATHCAT_PKG_BASE = `https://cdn.jsdelivr.net/gh/brichwin/MathCATForWeb@${DEFAULT_MATHCAT_TAG}/pkg/`;
@@ -252,6 +253,9 @@ async function generateForChannel(channel, mathml) {
   if (!mathml.trim()) {
     return { state: 'empty', value: '', message: 'Expression is empty.' };
   }
+  const normalizedMathml = assumeMathPrefixNamespaceIfMissing(mathml);
+  const mathcatMathml = normalizeForMathcat(normalizedMathml);
+  const safeMathcatMathml = ensureMathcatSafeMathml(mathcatMathml);
 
   if (channel.engine === 'mathcat') {
     if (runtime.engines.mathcat.state !== 'ready' || !runtime.mathcat.api) {
@@ -260,8 +264,8 @@ async function generateForChannel(channel, mathml) {
 
     try {
       const value = channel.mode === 'braille'
-        ? generateMathcatBraille(runtime.mathcat.api, mathml, channel.style)
-        : generateMathcatSpeech(runtime.mathcat.api, mathml, channel.style);
+        ? generateMathcatBraille(runtime.mathcat.api, safeMathcatMathml, channel.style)
+        : generateMathcatSpeech(runtime.mathcat.api, safeMathcatMathml, channel.style);
 
       return { state: 'ready', value: value || '', message: 'Generated successfully.' };
     } catch (error) {
@@ -275,7 +279,7 @@ async function generateForChannel(channel, mathml) {
     }
 
     try {
-      const value = await generateSreSpeech(mathml, channel.style);
+      const value = await generateSreSpeech(normalizedMathml, channel.style);
       return { state: 'ready', value: value || '', message: 'Generated successfully.' };
     } catch (error) {
       return { state: 'error', value: '', message: `SRE generation failed: ${error.message}` };
@@ -298,6 +302,104 @@ function generateMathcatBraille(mathCAT, mathml, brailleCode) {
   mathCAT.setPreference('Language', 'en');
   mathCAT.setPreference('BrailleCode', brailleCode || 'UEB');
   return mathCAT.getBraille('');
+}
+
+function assumeMathPrefixNamespaceIfMissing(source) {
+  const text = String(source || '');
+  const rootMatch = text.match(/<\s*m:math\b([\s\S]*?)>/i);
+  if (!rootMatch) {
+    return text;
+  }
+
+  const rootOpenTag = rootMatch[0];
+  if (/xmlns:m\s*=\s*["'][^"']+["']/i.test(rootOpenTag)) {
+    return text;
+  }
+
+  const patchedOpenTag = rootOpenTag.replace(/>$/, ' xmlns:m="http://www.w3.org/1998/Math/MathML">');
+  return text.replace(rootOpenTag, patchedOpenTag);
+}
+
+function normalizeForMathcat(source) {
+  const text = String(source || '');
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(text, 'application/xml');
+  if (doc.querySelector('parsererror')) {
+    return text;
+  }
+
+  const root = doc.documentElement;
+  const outDoc = document.implementation.createDocument(MATHML_NAMESPACE, root.localName || 'math', null);
+  const normalizedRoot = cloneNodeForMathcat(root, outDoc);
+  if (!normalizedRoot) {
+    return text;
+  }
+  const outRoot = outDoc.documentElement;
+  for (const attr of [...normalizedRoot.attributes]) {
+    outRoot.setAttribute(attr.name, attr.value);
+  }
+  for (const child of [...normalizedRoot.childNodes]) {
+    outRoot.append(child);
+  }
+
+  return new XMLSerializer().serializeToString(outDoc);
+}
+
+function ensureMathcatSafeMathml(source) {
+  const text = String(source || '');
+  // If prefixed MathML leaked through (e.g., parser fallback), strip m: prefixes
+  // so MathCAT receives canonical MathML element names.
+  if (!/(<\s*\/?\s*m:)|(\sxmlns:m\s*=)/i.test(text)) {
+    return text;
+  }
+
+  let normalized = text
+    .replace(/<\s*\/\s*m:([a-zA-Z][\w.-]*)/g, '</$1')
+    .replace(/<\s*m:([a-zA-Z][\w.-]*)/g, '<$1')
+    .replace(/\sxmlns:m\s*=\s*("([^"]*)"|'([^']*)')/gi, '');
+
+  const rootMatch = normalized.match(/<\s*math\b([^>]*)>/i);
+  if (rootMatch && !/\sxmlns\s*=\s*["'][^"']+["']/i.test(rootMatch[0])) {
+    const patchedRoot = rootMatch[0].replace(/>$/, ` xmlns="${MATHML_NAMESPACE}">`);
+    normalized = normalized.replace(rootMatch[0], patchedRoot);
+  }
+
+  return normalized;
+}
+
+function cloneNodeForMathcat(node, outDoc) {
+  if (node.nodeType === Node.TEXT_NODE) {
+    return outDoc.createTextNode(node.textContent || '');
+  }
+
+  if (node.nodeType !== Node.ELEMENT_NODE) {
+    return null;
+  }
+
+  const localName = node.localName || String(node.tagName || '').split(':').pop();
+  const cloned = outDoc.createElementNS(MATHML_NAMESPACE, localName);
+
+  for (const attr of [...node.attributes]) {
+    const rawName = String(attr.name || '');
+    if (/^xmlns(?::|$)/i.test(rawName)) {
+      continue;
+    }
+    if (rawName.includes(':') && !rawName.startsWith('xml:')) {
+      continue;
+    }
+
+    const name = rawName.startsWith('xml:') ? rawName : (attr.localName || rawName);
+    cloned.setAttribute(name, attr.value);
+  }
+
+  for (const child of [...node.childNodes]) {
+    const mapped = cloneNodeForMathcat(child, outDoc);
+    if (mapped) {
+      cloned.append(mapped);
+    }
+  }
+
+  return cloned;
 }
 
 async function generateSreSpeech(mathml, style) {
