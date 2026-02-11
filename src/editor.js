@@ -16,7 +16,6 @@ const GLOBAL_ATTRIBUTES = [
   'style',
   'id',
   'display',
-  'mathvariant',
   'mathsize',
   'mathcolor',
   'dir',
@@ -40,11 +39,11 @@ const ENTITY_REFERENCE_DESCRIPTIONS = {
 
 const MATHML_REFERENCE = {
   math: {
-    children: ['mrow', 'mi', 'mn', 'mo', 'mfrac', 'msup', 'msub', 'msubsup', 'mmultiscripts', 'mover', 'munder', 'munderover', 'msqrt', 'mroot', 'mfenced', 'mtable', 'semantics'],
-    attributes: ['xmlns', 'display', 'intent', 'altimg', 'alttext', 'altimg-width', 'altimg-height', 'altimg-valign']
+    children: ['mrow', 'mi', 'mn', 'mo', 'mtext', 'ms', 'mfrac', 'msup', 'msub', 'msubsup', 'mmultiscripts', 'mover', 'munder', 'munderover', 'msqrt', 'mroot', 'mfenced', 'mtable', 'semantics'],
+    attributes: ['xmlns', 'display', 'mathvariant', 'intent', 'altimg', 'alttext', 'altimg-width', 'altimg-height', 'altimg-valign']
   },
   mrow: {
-    children: ['mi', 'mn', 'mo', 'mtext', 'mspace', 'mfrac', 'msup', 'msub', 'msubsup', 'mmultiscripts', 'mover', 'munder', 'munderover', 'msqrt', 'mroot', 'mfenced', 'mtable'],
+    children: ['mi', 'mn', 'mo', 'mtext', 'ms', 'mspace', 'mfrac', 'msup', 'msub', 'msubsup', 'mmultiscripts', 'mover', 'munder', 'munderover', 'msqrt', 'mroot', 'mfenced', 'mtable'],
     attributes: ['intent']
   },
   mi: {
@@ -53,15 +52,19 @@ const MATHML_REFERENCE = {
   },
   mn: {
     children: ['text'],
-    attributes: ['intent']
+    attributes: ['mathvariant', 'intent']
   },
   mo: {
     children: ['text'],
-    attributes: ['form', 'fence', 'separator', 'stretchy', 'symmetric', 'intent']
+    attributes: ['mathvariant', 'form', 'fence', 'separator', 'stretchy', 'symmetric', 'intent']
   },
   mtext: {
     children: ['text'],
-    attributes: ['intent']
+    attributes: ['mathvariant', 'intent']
+  },
+  ms: {
+    children: ['text'],
+    attributes: ['mathvariant', 'lquote', 'rquote', 'intent']
   },
   mspace: {
     children: [],

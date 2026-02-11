@@ -11,7 +11,6 @@ const GLOBAL_ATTRIBUTES = new Set([
   'style',
   'id',
   'display',
-  'mathvariant',
   'mathsize',
   'mathcolor',
   'dir',
@@ -21,7 +20,7 @@ const GLOBAL_ATTRIBUTES = new Set([
   'data-*'
 ]);
 
-const TOKEN_ELEMENTS = new Set(['mi', 'mn', 'mo', 'mtext']);
+const TOKEN_ELEMENTS = new Set(['mi', 'mn', 'mo', 'mtext', 'ms']);
 const DEPRECATED_TAGS = new Set(['mfenced', 'mstyle']);
 const ELEMENT_COMPAT = {
   math: { tier: 'core', note: 'Core presentation root.' },
@@ -30,6 +29,7 @@ const ELEMENT_COMPAT = {
   mn: { tier: 'core', note: 'Core token element.' },
   mo: { tier: 'core', note: 'Core operator element.' },
   mtext: { tier: 'core', note: 'Core token element.' },
+  ms: { tier: 'core', note: 'Core token element.' },
   mspace: { tier: 'core', note: 'Core spacing element.' },
   mfrac: { tier: 'core', note: 'Core fraction element.' },
   msup: { tier: 'core', note: 'Core script element.' },
@@ -69,40 +69,69 @@ const ATTRIBUTE_COMPAT = {
   scriptsizemultiplier: { tier: 'at-risk', note: 'Legacy styling control with uneven support.' }
 };
 
-const CHILDREN_PRESENTATION = ['mrow', 'mi', 'mn', 'mo', 'mtext', 'mspace', 'mfrac', 'msup', 'msub', 'msubsup', 'mmultiscripts', 'mover', 'munder', 'munderover', 'msqrt', 'mroot', 'mtable', 'semantics'];
+const DEPRECATED_MATH_ATTRIBUTES = new Map([
+  [
+    'macros',
+    {
+      replacement: 'none',
+      note: 'External macro definition files are not part of MathML.'
+    }
+  ],
+  [
+    'mode',
+    {
+      replacement: 'display',
+      note: 'Use the MathML "display" attribute instead.'
+    }
+  ]
+]);
+
+const CHILDREN_PRESENTATION = [
+  'mrow', 'mi', 'mn', 'mo', 'mtext', 'ms', 'mspace',
+  'mfrac', 'msup', 'msub', 'msubsup', 'mmultiscripts', 'mover', 'munder', 'munderover',
+  'msqrt', 'mroot', 'mtable', 'semantics',
+  'mstyle', 'merror', 'mpadded', 'mphantom', 'menclose', 'maction'
+];
 
 const TAG_RULES = {
   math: {
     children: [...CHILDREN_PRESENTATION],
-    attributes: ['xmlns', 'display', 'intent', 'altimg', 'alttext', 'altimg-width', 'altimg-height', 'altimg-valign']
+    attributes: ['xmlns', 'display', 'mathvariant', 'intent', 'altimg', 'alttext', 'altimg-width', 'altimg-height', 'altimg-valign'],
+    arity: { min: 1 }
   },
   mrow: { children: [...CHILDREN_PRESENTATION, 'mrow'], attributes: ['intent'] },
   mi: { children: [], attributes: ['mathvariant', 'intent'] },
-  mn: { children: [], attributes: ['intent'] },
-  mo: { children: [], attributes: ['form', 'fence', 'separator', 'stretchy', 'symmetric', 'intent'] },
-  mtext: { children: [], attributes: ['intent'] },
+  mn: { children: [], attributes: ['mathvariant', 'intent'] },
+  mo: { children: [], attributes: ['mathvariant', 'form', 'fence', 'separator', 'stretchy', 'symmetric', 'intent'] },
+  mtext: { children: [], attributes: ['mathvariant', 'intent'] },
+  ms: { children: [], attributes: ['mathvariant', 'lquote', 'rquote', 'intent'] },
   mspace: { children: [], attributes: ['width', 'height', 'depth'] },
   mfrac: { children: [...CHILDREN_PRESENTATION], attributes: ['linethickness', 'bevelled', 'intent'], arity: { exact: 2 } },
   msup: { children: [...CHILDREN_PRESENTATION], attributes: ['intent'], arity: { exact: 2 } },
   msub: { children: [...CHILDREN_PRESENTATION], attributes: ['intent'], arity: { exact: 2 } },
   msubsup: { children: [...CHILDREN_PRESENTATION], attributes: ['intent'], arity: { exact: 3 } },
-  mmultiscripts: { children: [...CHILDREN_PRESENTATION, 'mprescripts', 'none'], attributes: ['intent'], arity: { min: 3 } },
+  mmultiscripts: { children: [...CHILDREN_PRESENTATION, 'mprescripts', 'none'], attributes: ['intent'], arity: { min: 1 } },
   mprescripts: { children: [], attributes: [] },
   none: { children: [], attributes: [] },
   mover: { children: [...CHILDREN_PRESENTATION], attributes: ['accent', 'intent'], arity: { exact: 2 } },
   munder: { children: [...CHILDREN_PRESENTATION], attributes: ['accentunder', 'intent'], arity: { exact: 2 } },
   munderover: { children: [...CHILDREN_PRESENTATION], attributes: ['accent', 'accentunder', 'intent'], arity: { exact: 3 } },
-  msqrt: { children: [...CHILDREN_PRESENTATION], attributes: ['intent'] },
+  msqrt: { children: [...CHILDREN_PRESENTATION], attributes: ['intent'], arity: { min: 1 } },
   mroot: { children: [...CHILDREN_PRESENTATION], attributes: ['intent'], arity: { exact: 2 } },
   mfenced: { children: [...CHILDREN_PRESENTATION], attributes: ['open', 'close', 'separators', 'intent'] },
+  menclose: { children: ['any'], attributes: ['notation', 'intent'], arity: { min: 1 } },
+  merror: { children: ['any'], attributes: ['intent'], arity: { min: 1 } },
+  mpadded: { children: ['any'], attributes: ['width', 'height', 'depth', 'lspace', 'voffset', 'intent'], arity: { min: 1 } },
+  mphantom: { children: ['any'], attributes: ['intent'], arity: { min: 1 } },
+  maction: { children: ['any'], attributes: ['actiontype', 'selection', 'intent'], arity: { min: 1 } },
   mtable: { children: ['mtr', 'mlabeledtr'], attributes: ['columnalign', 'rowalign', 'intent'] },
   mtr: { children: ['mtd'], attributes: ['intent'] },
-  mlabeledtr: { children: ['mtd'], attributes: ['intent'], arity: { min: 2 } },
-  mtd: { children: [...CHILDREN_PRESENTATION], attributes: ['rowspan', 'columnspan', 'intent'] },
+  mlabeledtr: { children: ['mtd'], attributes: ['intent'], arity: { min: 1 } },
+  mtd: { children: [...CHILDREN_PRESENTATION], attributes: ['rowspan', 'columnspan', 'intent'], arity: { min: 1 } },
   semantics: { children: ['mrow', ...CHILDREN_PRESENTATION, 'annotation', 'annotation-xml'], attributes: ['intent'], arity: { min: 1 } },
   annotation: { children: [], attributes: ['encoding', 'src'] },
   'annotation-xml': { children: ['any'], attributes: ['encoding', 'src'] },
-  mstyle: { children: ['any'], attributes: ['displaystyle', 'scriptlevel'] }
+  mstyle: { children: ['any'], attributes: ['mathvariant', 'displaystyle', 'scriptlevel'], arity: { min: 1 } }
 };
 
 const ATTRIBUTE_VALUE_RULES = [
@@ -239,12 +268,14 @@ function runLint(mathmlSource, options = {}) {
     validateAttributes(findings, node, { ignoreDataMjxAttributes });
     validateAttributeValues(findings, node);
     validateMathvariantUsage(findings, node);
+    validateNegativeSpacingPatterns(findings, node);
     validatePotentialSplitNumberLiteral(findings, node);
     validateSuspiciousScriptBase(findings, node);
     validateFunctionNameMiRuns(findings, node);
     validateMissingFunctionApplication(findings, node);
     validatePotentialPlainLanguageMiRuns(findings, node);
     validateAmbiguousLargeOperatorOperand(findings, node);
+    validateSemanticsAnnotationSupportWarning(findings, node);
     validateChildren(findings, node);
     validateArity(findings, node);
     validateTokenContent(findings, node);
@@ -290,6 +321,35 @@ function validateMathvariantUsage(findings, node) {
         'L023',
         'Uncommon mathvariant value',
         `mathvariant="${rawValue}" is recognized but uncommon. Common values include normal, bold, italic, bold-italic, double-struck, script, fraktur, sans-serif, and monospace.`,
+        SPEC_LINKS.presentation
+      )
+    );
+  }
+}
+
+function validateNegativeSpacingPatterns(findings, node) {
+  const tag = normalize(node.tagName);
+
+  if (tag === 'mspace' && isNegativeLength(node.getAttribute('width'))) {
+    findings.push(
+      makeFinding(
+        'warn',
+        'L033',
+        'Negative spacing pattern',
+        'Negative <mspace width> is strongly discouraged for constructing symbols or conveying meaning through spacing.',
+        SPEC_LINKS.presentation
+      )
+    );
+    return;
+  }
+
+  if (tag === 'mpadded' && isPotentialOverstrikeMpadded(node)) {
+    findings.push(
+      makeFinding(
+        'warn',
+        'L034',
+        'Potential overstruck spacing construct',
+        '<mpadded> appears to be used with negative spacing to visually combine symbols. Prefer a standard symbol encoding instead of spacing-based symbol construction.',
         SPEC_LINKS.presentation
       )
     );
@@ -507,6 +567,28 @@ function validateAmbiguousLargeOperatorOperand(findings, node) {
   }
 }
 
+function validateSemanticsAnnotationSupportWarning(findings, node) {
+  if (normalize(node.tagName) !== 'semantics') {
+    return;
+  }
+
+  const annotations = [...node.children].filter((child) => normalize(child.tagName) === 'annotation-xml');
+  const hasNonEmptyAnnotation = annotations.some((entry) => entry.children.length > 0 || String(entry.textContent || '').trim() !== '');
+  if (!hasNonEmptyAnnotation) {
+    return;
+  }
+
+  findings.push(
+    makeFinding(
+      'warn',
+      'L035',
+      'Limited support for semantics annotation fallback',
+      '<semantics> with non-empty <annotation-xml> is present, but this fallback pattern is not consistently honored by common assistive technology pipelines.',
+      SPEC_LINKS.presentation
+    )
+  );
+}
+
 function validateMathRootNamespace(findings, root) {
   const rawTag = String(root.tagName || '');
   const xmlns = root.getAttribute('xmlns');
@@ -560,6 +642,23 @@ function validateAttributes(findings, node, options = {}) {
 
   for (const attr of [...node.attributes]) {
     const attrName = attr.name;
+    const normalizedAttrName = normalize(attrName);
+
+    if (tag === 'math' && DEPRECATED_MATH_ATTRIBUTES.has(normalizedAttrName)) {
+      const meta = DEPRECATED_MATH_ATTRIBUTES.get(normalizedAttrName);
+      const replacement = meta.replacement === 'none' ? 'This attribute should be removed.' : `Use "${meta.replacement}" instead.`;
+      findings.push(
+        makeFinding(
+          'warn',
+          'L032',
+          'Deprecated attribute on <math>',
+          `Attribute "${attrName}" on <math> is deprecated. ${replacement} ${meta.note}`,
+          SPEC_LINKS.presentation
+        )
+      );
+      continue;
+    }
+
     if (/^data-mjx/i.test(attrName)) {
       if (ignoreDataMjxAttributes) {
         continue;
@@ -808,6 +907,31 @@ function isTokenList(value, allowedTokens) {
 function isNumericToken(value) {
   const text = String(value || '').trim();
   return /^\d+(?:\.\d+)?$/.test(text);
+}
+
+function isNegativeLength(value) {
+  const text = String(value || '').trim();
+  if (!text) {
+    return false;
+  }
+  return /^-/.test(text);
+}
+
+function isPotentialOverstrikeMpadded(node) {
+  if (hasNegativeMpaddedAttribute(node)) {
+    return true;
+  }
+
+  const directChildren = [...node.children];
+  const hasNegativeMspaceChild = directChildren.some((child) => normalize(child.tagName) === 'mspace' && isNegativeLength(child.getAttribute('width')));
+  const hasVisibleSibling = directChildren.some((child) => normalize(child.tagName) === 'mtext' || normalize(child.tagName) === 'mi' || normalize(child.tagName) === 'mo');
+
+  return hasNegativeMspaceChild && hasVisibleSibling;
+}
+
+function hasNegativeMpaddedAttribute(node) {
+  const attrs = ['width', 'lspace', 'height', 'depth', 'voffset'];
+  return attrs.some((name) => isNegativeLength(node.getAttribute(name)));
 }
 
 function isLargeOperatorConstruct(node) {

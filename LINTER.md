@@ -94,6 +94,10 @@ Example:
 - `L028` split `<mi>` run matching a standard LaTeX function command name
 - `L029` split `<mi>` run matching a likely `\operatorname{...}` function name
 - `L031` missing U+2061 FUNCTION APPLICATION after recognized function-name `<mi>`
+- `L032` deprecated attribute on `<math>` (`macros`, `mode`)
+- `L033` negative `<mspace width>` spacing-conveyed-meaning warning
+- `L034` potential overstruck symbol construct via `<mpadded>` negative spacing
+- `L035` `<semantics>` with non-empty `<annotation-xml>` fallback may be ignored by common AT pipelines
 - `L030` invalid child
 - `L040` unexpected child count (exact arity)
 - `L041` too few children (minimum arity)
