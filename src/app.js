@@ -55,6 +55,7 @@ const MATHJAX_VERSIONS = [
 
 const STORAGE_KEY = 'mathml-workbench-state-v1';
 const MATHJAX_SCRIPT_ID = 'mathjax-runtime-script';
+const DEFAULT_LINT_PROFILE = 'presentation-mathml3';
 
 let mathJaxRuntime = {
   loadedKey: '',
@@ -82,7 +83,7 @@ function createInitialState() {
       A: [],
       B: []
     },
-    lintProfile: 'authoring-guidance',
+    lintProfile: DEFAULT_LINT_PROFILE,
     ignoreDataMjxAttributes: true,
     renderZoom: 100,
     intentSuggestions: {
@@ -218,7 +219,7 @@ function wireControls(store) {
 
   lintProfileSelect.addEventListener('change', () => {
     store.setState((draft) => {
-      draft.lintProfile = lintProfileSelect.value;
+      draft.lintProfile = normalizeLintProfileValue(lintProfileSelect.value);
     });
   });
 
@@ -620,7 +621,7 @@ function wireControls(store) {
   const current = store.getState();
   versionSelect.value = current.mathjax.versionId;
   modeSelect.value = current.mathjax.outputMode;
-  lintProfileSelect.value = current.lintProfile || 'authoring-guidance';
+  lintProfileSelect.value = normalizeLintProfileValue(current.lintProfile);
   ignoreDataMjxToggle.checked = Boolean(current.ignoreDataMjxAttributes);
   const zoom = clampRenderZoom(Number(current.renderZoom) || 100);
   renderZoomSlider.value = String(zoom);
@@ -661,8 +662,9 @@ function syncControlValues(state) {
   if (modeSelect.value !== state.mathjax.outputMode) {
     modeSelect.value = state.mathjax.outputMode;
   }
-  if (lintProfileSelect.value !== (state.lintProfile || 'authoring-guidance')) {
-    lintProfileSelect.value = state.lintProfile || 'authoring-guidance';
+  const normalizedProfile = normalizeLintProfileValue(state.lintProfile);
+  if (lintProfileSelect.value !== normalizedProfile) {
+    lintProfileSelect.value = normalizedProfile;
   }
   if (ignoreDataMjxToggle.checked !== Boolean(state.ignoreDataMjxAttributes)) {
     ignoreDataMjxToggle.checked = Boolean(state.ignoreDataMjxAttributes);
@@ -956,17 +958,39 @@ function renderAnalysisList(selector, items, includeLinks = false) {
     text.textContent = item.message || '';
     li.append(text);
 
-    if (includeLinks && item.link) {
-      const link = document.createElement('a');
-      link.href = item.link;
-      link.target = '_blank';
-      link.rel = 'noreferrer noopener';
-      link.textContent = 'W3C reference';
-      li.append(link);
+    const references = resolveReferencesForItem(item, includeLinks);
+    if (references.length > 0) {
+      const refsWrap = document.createElement('div');
+      refsWrap.className = 'analysis-references';
+      for (const ref of references) {
+        const link = document.createElement('a');
+        link.href = ref.url;
+        link.target = '_blank';
+        link.rel = 'noreferrer noopener';
+        link.textContent = ref.label || 'Reference';
+        refsWrap.append(link);
+      }
+      li.append(refsWrap);
     }
 
     list.append(li);
   }
+}
+
+function resolveReferencesForItem(item, includeLinks) {
+  if (Array.isArray(item.references) && item.references.length > 0) {
+    return item.references;
+  }
+
+  if (item.reference) {
+    return [{ label: 'Spec reference', url: item.reference }];
+  }
+
+  if (includeLinks && item.link) {
+    return [{ label: 'W3C reference', url: item.link }];
+  }
+
+  return [];
 }
 
 function renderOutputDiff(state) {
@@ -977,12 +1001,14 @@ function renderOutputDiff(state) {
   const sidePane = document.querySelector('#diff-side-by-side');
   const sideA = document.querySelector('#diff-side-a');
   const sideB = document.querySelector('#diff-side-b');
+  const isBrailleChannel = channel === 'mathcatBraille';
 
   if (!channelState) {
     summary.textContent = 'Select a valid channel.';
     unifiedPane.textContent = '';
     sideA.textContent = '';
     sideB.textContent = '';
+    setDiffBrailleMode(false, unifiedPane, sideA, sideB);
     return;
   }
 
@@ -992,6 +1018,7 @@ function renderOutputDiff(state) {
   summary.textContent = result.equal
     ? 'No A/B differences for selected channel.'
     : `A/B differences detected for channel ${channel}.`;
+  setDiffBrailleMode(isBrailleChannel, unifiedPane, sideA, sideB);
 
   unifiedPane.textContent = result.unifiedLines.join('\n');
 
@@ -1018,6 +1045,13 @@ function buildDiffSpan(type, value) {
   span.className = `diff-${type}`;
   span.textContent = value;
   return span;
+}
+
+function setDiffBrailleMode(enabled, unifiedPane, sideA, sideB) {
+  const method = enabled ? 'add' : 'remove';
+  unifiedPane.classList[method]('diff-pane-braille');
+  sideA.classList[method]('diff-pane-braille');
+  sideB.classList[method]('diff-pane-braille');
 }
 
 function applyRenderZoom(state) {
@@ -1260,8 +1294,9 @@ function loadScript(src, id) {
 }
 
 function parseMathML(source) {
+  const normalizedSource = assumeMathPrefixNamespaceIfMissing(source);
   const parser = new DOMParser();
-  const doc = parser.parseFromString(source, 'application/xml');
+  const doc = parser.parseFromString(normalizedSource, 'application/xml');
   const parseError = doc.querySelector('parsererror');
 
   if (parseError) {
@@ -1269,6 +1304,22 @@ function parseMathML(source) {
   }
 
   return { node: document.importNode(doc.documentElement, true) };
+}
+
+function assumeMathPrefixNamespaceIfMissing(source) {
+  const text = String(source || '');
+  const rootMatch = text.match(/<\s*m:math\b([\s\S]*?)>/i);
+  if (!rootMatch) {
+    return text;
+  }
+
+  const rootOpenTag = rootMatch[0];
+  if (/xmlns:m\s*=\s*["'][^"']+["']/i.test(rootOpenTag)) {
+    return text;
+  }
+
+  const patchedOpenTag = rootOpenTag.replace(/>$/, ' xmlns:m="http://www.w3.org/1998/Math/MathML">');
+  return text.replace(rootOpenTag, patchedOpenTag);
 }
 
 function buildInfoNode(message) {
@@ -1335,6 +1386,7 @@ function bootstrap() {
   const localHydrated = hydrateState(STORAGE_KEY, createInitialState());
   const queryHydrated = hydrateStateFromQuery(window.location.search, localHydrated);
   const loaded = queryHydrated.state;
+  loaded.lintProfile = normalizeLintProfileValue(loaded.lintProfile);
   const store = createStore(loaded, bus);
 
   createEditorController(store, bus);
@@ -1395,4 +1447,23 @@ function renderLintTestsBadge() {
     badge.className = 'lint-tests-badge lint-tests-running';
     badge.title = 'Open linter regression tests';
   }
+}
+
+function normalizeLintProfileValue(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (normalized === 'authoring-guidance') {
+    return 'presentation-mathml3';
+  }
+  if (normalized === 'strict-core') {
+    return 'core-mathml3';
+  }
+  if (
+    normalized === 'presentation-mathml3' ||
+    normalized === 'core-mathml3' ||
+    normalized === 'presentation-mathml4' ||
+    normalized === 'core-mathml4'
+  ) {
+    return normalized;
+  }
+  return DEFAULT_LINT_PROFILE;
 }

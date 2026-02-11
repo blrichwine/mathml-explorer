@@ -5,17 +5,23 @@ This document describes how the MathML linter works in this project, where rules
 ## File Location
 
 - Linter implementation: `/Users/brian/dev/cdx/mathml-explorer/src/lint.js`
+- MathML3 schema data source (imported/adapted): `/Users/brian/dev/cdx/mathml-explorer/src/mathml-data-v3.js`
+- Canonical schema adapter (used by linter + editor context help): `/Users/brian/dev/cdx/mathml-explorer/src/mathml-schema-adapter.js`
 
 ## Current Scope
 
 This linter is a **spec-aligned heuristic linter** for authoring guidance, not a complete schema validator.
+Tag/attribute/child compatibility now uses a schema-driven base map built from `mathml-data-v3.js`, with local overlay rules for project-specific guidance checks.
 
 ## Profiles
 
-The UI exposes two profiles:
+The UI exposes four profiles:
 
-- `authoring-guidance` (default): includes structural checks plus advisory semantics/intent hints.
-- `strict-core`: focuses on strict structural checks; guidance-only hints are suppressed and deprecated patterns are escalated.
+- `presentation-mathml3` (default): Presentation MathML3-oriented checks with guidance hints.
+- `core-mathml3`: Core-focused subset checks; guidance-only hints are suppressed and non-core patterns are emphasized.
+- `presentation-mathml4`: provisional Presentation MathML4 profile using the same schema map as MathML3 until a dedicated MathML4 map is added.
+- `core-mathml4`: provisional Core MathML4 profile using the same schema map as MathML3 until a dedicated MathML4 map is added.
+  - Provisional MathML4 overlay currently applied: global `intent` allowance across presentation elements (for MathML3 pipelines adopting intent authoring).
 
 It focuses on:
 - XML well-formedness
@@ -24,6 +30,7 @@ It focuses on:
 - Arity checks for fixed-structure elements
 - Legacy/deprecated usage warnings
 - Intent-oriented semantic hints
+- Content MathML allowance inside `annotation` / `annotation-xml` wrappers for presentation/core linting
 
 ## Rule Sources
 
@@ -61,6 +68,7 @@ Each finding includes:
 - `title`: short label
 - `message`: user-facing explanation
 - `reference`: spec URL
+- `references`: optional labeled links (`spec`, `compat`, `project-note`) shown in the UI for deeper rationale
 
 Example:
 
@@ -81,8 +89,10 @@ Example:
 - `L003` unexpected root
 - `L004` missing `<math>` namespace declaration
 - `L005` unexpected `<math>` namespace value
+- `L006` assumed `xmlns:m` mapping for `<m:math>` inputs when missing
 - `L010` unknown tag
 - `L011` deprecated pattern
+- `L012` tag outside selected lint profile
 - `L020` unknown attribute
 - `L021` invalid attribute value for constrained attributes
 - `L022` `mathvariant` usage warning on non-`<mi>`
@@ -98,6 +108,9 @@ Example:
 - `L033` negative `<mspace width>` spacing-conveyed-meaning warning
 - `L034` potential overstruck symbol construct via `<mpadded>` negative spacing
 - `L035` `<semantics>` with non-empty `<annotation-xml>` fallback may be ignored by common AT pipelines
+- `L036` possible missing invisible times (`&#x2062;`) in linear tacit-multiplication contexts
+- `L037` possible missing invisible separator (`&#x2063;`) in index-like omitted-comma contexts
+- `L038` possible missing invisible plus (`&#x2064;`) in mixed-fraction implicit-addition contexts
 - `L030` invalid child
 - `L040` unexpected child count (exact arity)
 - `L041` too few children (minimum arity)
@@ -124,14 +137,16 @@ Example:
 ## How to Extend
 
 1. Add/update tag definitions in `TAG_RULES`.
-2. Add new checks in dedicated `validate*` functions.
-3. Add a stable lint code (`L###`) and a reference URL.
-4. Keep messages actionable and non-ambiguous.
-5. Update this document when introducing new rule classes.
+2. Update profile maps (`LINT_PROFILES`) and shared schema adapter wiring (`src/mathml-schema-adapter.js`) as needed.
+3. For a dedicated MathML4 map, add version-specific rule sets and route by profile version.
+4. Add new checks in dedicated `validate*` functions.
+5. Add a stable lint code (`L###`) and a reference URL.
+6. Keep messages actionable and non-ambiguous.
+7. Update this document when introducing new rule classes.
 
 ## Future Improvements
 
-- Split profiles: `strict-core` vs `authoring-guidance`
+- Replace provisional MathML4 profile mappings with a dedicated MathML4 schema data file
 - Per-rule toggles in UI
 - Precise location reporting (line/column)
 - Optional JSON schema export of rule definitions
